@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 
 export default async function Home() {
-  const profile = await getCurrentProfile();
+  const profile = await getCurrentProfile().catch(() => null);
 
   if (!profile) {
     if (process.env.SINGLE_USER_MODE === "true") {
