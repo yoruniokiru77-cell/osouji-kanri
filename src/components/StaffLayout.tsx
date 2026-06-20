@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarPlus, ClipboardCheck, House, ReceiptText, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const items = [
   { href: "/staff/dashboard", label: "ホーム", icon: House },
@@ -19,6 +20,11 @@ export function StaffLayout({
   title?: string;
 }) {
   const pathname = usePathname();
+  const [pendingHref, setPendingHref] = useState("");
+
+  useEffect(() => {
+    setPendingHref("");
+  }, [pathname]);
 
   return (
     <div className="staff-app">
@@ -30,15 +36,25 @@ export function StaffLayout({
         </Link>
         {title ? <strong>{title}</strong> : <span />}
       </header>
-      <main className="staff-main">{children}</main>
+      {pendingHref ? <div className="route-loading-bar" /> : null}
+      <main className={pendingHref ? "staff-main route-pending" : "staff-main"}>{children}</main>
       <nav className="staff-nav" aria-label="スタッフメニュー">
         {items.map((item) => {
           const active = pathname === item.href;
+          const pending = pendingHref === item.href;
           const Icon = item.icon;
           return (
-            <Link className={active ? "active" : ""} href={item.href} key={item.href}>
+            <Link
+              className={[active ? "active" : "", pending ? "pending" : ""].filter(Boolean).join(" ")}
+              href={item.href}
+              key={item.href}
+              onClick={() => {
+                if (!active) setPendingHref(item.href);
+              }}
+              prefetch
+            >
               <Icon size={20} />
-              <span>{item.label}</span>
+              <span>{pending ? "読込中" : item.label}</span>
             </Link>
           );
         })}

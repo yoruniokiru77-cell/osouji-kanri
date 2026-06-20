@@ -21,7 +21,7 @@ export default async function StaffExpensePage({
     supabase
       .from("reservations")
       .select(
-        "id, scheduled_at, customer_name, customer_phone, address, amount, service_content, parking_available, notes, status, reservation_staff!inner(staff_id), reservation_tools(tools(id, name)), work_reports(*)",
+        "id, scheduled_at, customer_name, customer_phone, address, service_content, status, reservation_staff!inner(staff_id)",
       )
       .eq("reservation_staff.staff_id", profile.id)
       .neq("status", "cancelled")
@@ -29,7 +29,7 @@ export default async function StaffExpensePage({
     supabase
       .from("expenses")
       .select(
-        "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, profiles(id, display_name, role, commission_rate), expense_categories(id, name)",
+        "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, expense_categories(id, name)",
       )
       .eq("staff_id", profile.id)
       .order("created_at", { ascending: false }),

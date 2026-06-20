@@ -66,7 +66,7 @@ export default async function StaffDashboard({
     supabase
       .from("reservations")
       .select(
-        "id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff!inner(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)",
+        "id, scheduled_at, customer_name, customer_phone, address, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name), reservation_staff!inner(staff_id), reservation_workers(worker_id, workers(id, name)), reservation_tools(tool_id)",
       )
       .eq("reservation_staff.staff_id", profile.id)
       .neq("status", "cancelled")
@@ -76,7 +76,7 @@ export default async function StaffDashboard({
     supabase
       .from("expenses")
       .select(
-        "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, profiles(id, display_name, role, commission_rate), expense_categories(id, name)",
+        "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, expense_categories(id, name)",
       )
       .eq("staff_id", profile.id)
       .order("created_at", { ascending: false })

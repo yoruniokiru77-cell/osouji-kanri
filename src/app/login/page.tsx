@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { signIn } from "@/app/actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export default async function LoginPage({
   searchParams,
@@ -24,9 +25,9 @@ export default async function LoginPage({
             <span>パスワード</span>
             <input className="input" name="password" type="password" required />
           </label>
-          <button className="button" type="submit">
+          <SubmitButton className="button" pendingLabel="ログイン中...">
             ログイン
-          </button>
+          </SubmitButton>
         </form>
       </section>
     </main>

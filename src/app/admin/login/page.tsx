@@ -1,4 +1,5 @@
 import { signInAdmin } from "@/app/actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export default async function AdminLoginPage({
   searchParams,
@@ -30,9 +31,9 @@ export default async function AdminLoginPage({
             <span>パスワード</span>
             <input className="input" name="password" required type="password" />
           </label>
-          <button className="button" type="submit">
+          <SubmitButton className="button" pendingLabel="ログイン中...">
             管理画面へログイン
-          </button>
+          </SubmitButton>
         </form>
       </section>
     </main>
