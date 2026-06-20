@@ -76,6 +76,8 @@ export async function createReservation(formData: FormData) {
     .from("reservations")
     .insert({
       scheduled_at: readString(formData, "scheduled_at"),
+      customer_name: readString(formData, "customer_name") || null,
+      customer_phone: readString(formData, "customer_phone") || null,
       address: readString(formData, "address"),
       amount: readNumber(formData, "amount"),
       service_content: readString(formData, "service_content"),
@@ -138,6 +140,8 @@ export async function createStaffReservation(formData: FormData) {
     .insert({
       id: reservationId,
       scheduled_at: readString(formData, "scheduled_at"),
+      customer_name: readString(formData, "customer_name") || null,
+      customer_phone: readString(formData, "customer_phone") || null,
       address: readString(formData, "address"),
       amount: 0,
       service_content: serviceContent.name,
@@ -205,6 +209,8 @@ export async function updateStaffReservation(formData: FormData) {
 
   const { error } = await supabase.rpc("update_own_scheduled_reservation", {
     target_address: readString(formData, "address"),
+    target_customer_name: readString(formData, "customer_name") || null,
+    target_customer_phone: readString(formData, "customer_phone") || null,
     target_notes: readString(formData, "notes") || null,
     target_parking_available: readString(formData, "parking_available") === "true",
     target_parking_notes: readString(formData, "parking_notes") || null,

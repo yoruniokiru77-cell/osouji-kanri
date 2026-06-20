@@ -3,6 +3,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { notFound } from "next/navigation";
 import { updateStaffReservation } from "@/app/actions";
 import { StaffLayout } from "@/components/StaffLayout";
+import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { ServiceCategory, ServiceContent, Worker } from "@/lib/types";
@@ -35,7 +36,7 @@ export default async function StaffScheduleEditPage({
     supabase
       .from("reservations")
       .select(
-        "id, scheduled_at, address, service_content, service_content_id, service_category_id, parking_available, parking_notes, notes, status, reservation_staff!inner(staff_id), reservation_workers(worker_id)",
+        "id, scheduled_at, customer_name, customer_phone, address, service_content, service_content_id, service_category_id, parking_available, parking_notes, notes, status, reservation_staff!inner(staff_id), reservation_workers(worker_id)",
       )
       .eq("id", id)
       .eq("reservation_staff.staff_id", profile.id)
@@ -90,6 +91,20 @@ export default async function StaffScheduleEditPage({
                 name="scheduled_at"
                 required
                 type="datetime-local"
+              />
+            </label>
+            <label>
+              <span>お客様名</span>
+              <input defaultValue={reservation.customer_name ?? ""} name="customer_name" placeholder="例：山田様" />
+            </label>
+            <label>
+              <span>電話番号</span>
+              <input
+                defaultValue={reservation.customer_phone ?? ""}
+                inputMode="tel"
+                name="customer_phone"
+                placeholder="例：090-1234-5678"
+                type="tel"
               />
             </label>
             <label>
@@ -168,10 +183,10 @@ export default async function StaffScheduleEditPage({
               <span>備考</span>
               <textarea defaultValue={reservation.notes ?? ""} name="notes" rows={5} />
             </label>
-            <button className="primary-button green-button" type="submit">
+            <SubmitButton className="primary-button green-button" pendingLabel="変更を保存中...">
               <Save size={17} />
               変更を保存
-            </button>
+            </SubmitButton>
           </form>
         )}
       </div>

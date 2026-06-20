@@ -56,14 +56,22 @@ export default async function StaffDashboard({
   const profile = await requireRole("staff");
   const query = await searchParams;
   const supabase = await createClient();
+  const now = new Date();
+  const todayKey = dateKeyFormatter.format(now);
+  const selectedDate = isDateKey(query.date) ? query.date! : todayKey;
+  const reservationWindowStart = new Date(`${selectedDate}T00:00:00+09:00`);
+  const reservationWindowEnd = new Date(reservationWindowStart);
+  reservationWindowEnd.setDate(reservationWindowEnd.getDate() + 90);
   const [reservationResult, expenseResult] = await Promise.all([
     supabase
       .from("reservations")
       .select(
-        "id, scheduled_at, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff!inner(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)",
+        "id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff!inner(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)",
       )
       .eq("reservation_staff.staff_id", profile.id)
       .neq("status", "cancelled")
+      .gte("scheduled_at", reservationWindowStart.toISOString())
+      .lt("scheduled_at", reservationWindowEnd.toISOString())
       .order("scheduled_at"),
     supabase
       .from("expenses")
@@ -77,9 +85,6 @@ export default async function StaffDashboard({
 
   const reservations = (reservationResult.data ?? []) as unknown as ReservationWithRelations[];
   const expenses = (expenseResult.data ?? []) as unknown as Expense[];
-  const now = new Date();
-  const todayKey = dateKeyFormatter.format(now);
-  const selectedDate = isDateKey(query.date) ? query.date! : todayKey;
   const reservationDateKey = (value: string) => dateKeyFormatter.format(new Date(value));
   const selectedBookings = reservations.filter(
     (item) => reservationDateKey(item.scheduled_at) === selectedDate,
@@ -191,6 +196,12 @@ export default async function StaffDashboard({
                     {booking.address}
                   </p>
                   <p className="description">{booking.service_content}</p>
+                  {booking.customer_name || booking.customer_phone ? (
+                    <p className="customer-line">
+                      <Users size={14} />
+                      {[booking.customer_name, booking.customer_phone].filter(Boolean).join(" / ")}
+                    </p>
+                  ) : null}
                   <div className="meta-row">
                     {booking.service_categories?.name ? (
                       <span>

@@ -92,7 +92,7 @@ export default async function AdminDashboard({
     supabase
       .from("reservations")
       .select(
-        "id, scheduled_at, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)",
+        "id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)",
       )
       .gte("scheduled_at", range.start)
       .lt("scheduled_at", range.end)
@@ -211,6 +211,12 @@ export default async function AdminDashboard({
                     <span>{formatDateTime(reservation.scheduled_at)}</span>
                   </div>
                   <p><MapPin size={14} />{reservation.address}</p>
+                  {reservation.customer_name || reservation.customer_phone ? (
+                    <p>
+                      <Users size={14} />
+                      {[reservation.customer_name, reservation.customer_phone].filter(Boolean).join(" / ")}
+                    </p>
+                  ) : null}
                   <div className="approval-report">
                     <span>完了報告</span>
                     <p>{report.report_text}</p>
@@ -300,7 +306,13 @@ export default async function AdminDashboard({
                 <tr key={reservation.id}>
                   <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
                   <td>{reservation.service_categories?.name ?? "未設定"}</td>
-                  <td><strong>{reservation.service_content}</strong><small>{reservation.address}</small></td>
+                  <td>
+                    <strong>{reservation.service_content}</strong>
+                    <small>{reservation.address}</small>
+                    {reservation.customer_name || reservation.customer_phone ? (
+                      <small>{[reservation.customer_name, reservation.customer_phone].filter(Boolean).join(" / ")}</small>
+                    ) : null}
+                  </td>
                   <td>{workerNames(reservation) || "未設定"}</td>
                   <td><span className={statusClass(reservation.status)}>{reservationLabels[reservation.status]}</span></td>
                   <td className="numeric">{reservation.status === "completed" ? formatCurrency(Number(reservation.amount)) : "-"}</td>

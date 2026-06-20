@@ -59,6 +59,8 @@ create table if not exists public.expense_categories (
 create table if not exists public.reservations (
   id uuid primary key default gen_random_uuid(),
   scheduled_at timestamptz not null,
+  customer_name text,
+  customer_phone text,
   address text not null,
   amount numeric(12, 0) not null check (amount >= 0),
   service_content text not null,

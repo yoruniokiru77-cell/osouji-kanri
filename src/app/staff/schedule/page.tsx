@@ -1,6 +1,7 @@
 import { CalendarPlus } from "lucide-react";
 import { createStaffReservation } from "@/app/actions";
 import { StaffLayout } from "@/components/StaffLayout";
+import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { ServiceCategory, ServiceContent, Tool, Worker } from "@/lib/types";
@@ -48,6 +49,14 @@ export default async function StaffSchedulePage({
           <label>
             <span>日時 *</span>
             <input name="scheduled_at" required type="datetime-local" />
+          </label>
+          <label>
+            <span>お客様名</span>
+            <input name="customer_name" placeholder="例：山田様" />
+          </label>
+          <label>
+            <span>電話番号</span>
+            <input inputMode="tel" name="customer_phone" placeholder="例：090-1234-5678" type="tel" />
           </label>
           <label>
             <span>住所 *</span>
@@ -119,10 +128,10 @@ export default async function StaffSchedulePage({
             <span>備考・注意事項</span>
             <textarea name="notes" placeholder="訪問時の注意事項など" rows={4} />
           </label>
-          <button className="primary-button green-button" type="submit">
+          <SubmitButton className="primary-button green-button" pendingLabel="予定を登録中...">
             <CalendarPlus size={17} />
             予定を登録する
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </StaffLayout>

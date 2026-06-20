@@ -46,6 +46,8 @@ export type Worker = {
 export type Reservation = {
   id: string;
   scheduled_at: string;
+  customer_name: string | null;
+  customer_phone: string | null;
   address: string;
   amount: number;
   service_content: string;

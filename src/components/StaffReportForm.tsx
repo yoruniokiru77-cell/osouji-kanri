@@ -5,11 +5,14 @@ import { CheckCircle2, Clock3, CreditCard, MapPin, Upload, Users } from "lucide-
 import { upsertWorkReport } from "@/app/actions";
 import { reservationLabels, statusClass } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/client";
+import { SubmitButton } from "@/components/SubmitButton";
 import type { ReservationStatus, Worker } from "@/lib/types";
 
 type BookingOption = {
   id: string;
   scheduledAt: string;
+  customerName: string | null;
+  customerPhone: string | null;
   address: string;
   content: string;
   status: ReservationStatus;
@@ -32,18 +35,26 @@ export function StaffReportForm({
     bookings.find((booking) => booking.id === initialBookingId)?.workerIds ?? [],
   );
   const [paymentMethod, setPaymentMethod] = useState("cash");
-  const [reportedAmount, setReportedAmount] = useState(0);
-  const [changeAmount, setChangeAmount] = useState(previousChangeAmount);
-  const [cashCollectedAmount, setCashCollectedAmount] = useState(0);
+  const [reportedAmountInput, setReportedAmountInput] = useState("");
+  const [changeAmountInput, setChangeAmountInput] = useState(String(previousChangeAmount));
+  const [cashCollectedAmountInput, setCashCollectedAmountInput] = useState("");
   const [statementUrl, setStatementUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [submitMessage, setSubmitMessage] = useState("");
   const selected = bookings.find((booking) => booking.id === selectedId);
+  const reportedAmount = Number(reportedAmountInput || 0);
+  const changeAmount = Number(changeAmountInput || 0);
+  const cashCollectedAmount = Number(cashCollectedAmountInput || 0);
   const expectedCash = changeAmount - previousChangeAmount + reportedAmount;
   const difference = cashCollectedAmount - expectedCash;
   const cashReady =
     paymentMethod !== "cash" ||
-    (cashCollectedAmount >= 0 && difference === 0);
+    (reportedAmount > 0 &&
+      changeAmountInput !== "" &&
+      cashCollectedAmountInput !== "" &&
+      cashCollectedAmount >= 0 &&
+      difference === 0);
   const cardReady = paymentMethod !== "card" || Boolean(statementUrl);
   const canSubmit =
     Boolean(selectedId) &&
@@ -52,6 +63,7 @@ export function StaffReportForm({
     cashReady &&
     cardReady &&
     !uploading;
+  const canPressSubmit = Boolean(selectedId) && selectedWorkerIds.length > 0 && !uploading;
 
   useEffect(() => {
     setSelectedWorkerIds(
@@ -59,11 +71,46 @@ export function StaffReportForm({
     );
   }, [bookings, selectedId]);
 
+  useEffect(() => {
+    setChangeAmountInput(String(previousChangeAmount));
+  }, [previousChangeAmount]);
+
   const reconciliationLabel = useMemo(() => {
     if (reportedAmount <= 0) return "売上金額を入力してください";
     if (difference === 0) return "現金は一致しています";
     return `差額 ${new Intl.NumberFormat("ja-JP").format(difference)}円`;
   }, [difference, reportedAmount]);
+
+  function validateBeforeSubmit(event: React.FormEvent<HTMLFormElement>) {
+    setSubmitMessage("");
+
+    if (!selectedId) {
+      event.preventDefault();
+      setSubmitMessage("対象案件を選択してください。");
+      return;
+    }
+    if (selectedWorkerIds.length === 0) {
+      event.preventDefault();
+      setSubmitMessage("当日の作業担当者を1人以上選択してください。");
+      return;
+    }
+    if (!Number.isInteger(reportedAmount) || reportedAmount <= 0) {
+      event.preventDefault();
+      setSubmitMessage("売上金額を1円以上の整数で入力してください。");
+      return;
+    }
+    if (paymentMethod === "card" && !statementUrl) {
+      event.preventDefault();
+      setSubmitMessage("カード決済の場合は、カード明細画像を添付してください。");
+      return;
+    }
+    if (paymentMethod === "cash" && !cashReady) {
+      event.preventDefault();
+      setSubmitMessage(
+        `現金が一致していません。回収現金は ${new Intl.NumberFormat("ja-JP").format(expectedCash)}円 になるように入力してください。`,
+      );
+    }
+  }
 
   async function uploadStatement(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -96,7 +143,7 @@ export function StaffReportForm({
   }
 
   return (
-    <form action={upsertWorkReport} className="staff-form">
+    <form action={upsertWorkReport} className="staff-form" onSubmit={validateBeforeSubmit}>
       <label>
         <span>対象案件 *</span>
         <select
@@ -128,6 +175,12 @@ export function StaffReportForm({
             <span className={statusClass(selected.status)}>{reservationLabels[selected.status]}</span>
           </div>
           <p><MapPin size={15} />{selected.address}</p>
+          {selected.customerName || selected.customerPhone ? (
+            <p>
+              <Users size={15} />
+              {[selected.customerName, selected.customerPhone].filter(Boolean).join(" / ")}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -168,10 +221,11 @@ export function StaffReportForm({
           <input
             min="1"
             name="reported_amount"
-            onChange={(event) => setReportedAmount(Number(event.target.value))}
+            onChange={(event) => setReportedAmountInput(event.target.value)}
             placeholder="0"
             required
             type="number"
+            value={reportedAmountInput}
           />
         </div>
         <small className="field-help">管理者の承認後、売上と給与へ反映されます。</small>
@@ -228,9 +282,9 @@ export function StaffReportForm({
               <input
                 min="0"
                 name="change_amount"
-                onChange={(event) => setChangeAmount(Number(event.target.value))}
+                onChange={(event) => setChangeAmountInput(event.target.value)}
                 type="number"
-                value={changeAmount}
+                value={changeAmountInput}
               />
             </div>
           </label>
@@ -241,9 +295,9 @@ export function StaffReportForm({
               <input
                 min="0"
                 name="cash_collected_amount"
-                onChange={(event) => setCashCollectedAmount(Number(event.target.value))}
+                onChange={(event) => setCashCollectedAmountInput(event.target.value)}
                 type="number"
-                value={cashCollectedAmount}
+                value={cashCollectedAmountInput}
               />
             </div>
           </label>
@@ -258,9 +312,23 @@ export function StaffReportForm({
       <label><span>課題・申し送り事項</span><textarea name="issues" placeholder="次回への申し送り、気になった点など" rows={4} /></label>
       <label><span>口コミ・お客様の反応</span><textarea name="customer_review" placeholder="お客様からのコメントや評価など" rows={4} /></label>
       <label><span>その他連絡事項</span><textarea name="notes" placeholder="管理者への連絡事項があれば" rows={3} /></label>
-      <button className="primary-button green-button" disabled={!canSubmit} type="submit">
+      {submitMessage ? <p className="form-error" aria-live="polite">{submitMessage}</p> : null}
+      {!submitMessage && !canSubmit && canPressSubmit ? (
+        <p className="field-help" aria-live="polite">
+          {paymentMethod === "cash" && !cashReady
+            ? "現金の場合は、釣銭チェックが一致すると送信できます。"
+            : paymentMethod === "card" && !cardReady
+              ? "カードの場合は、明細画像を添付すると送信できます。"
+              : "必須項目を入力してください。"}
+        </p>
+      ) : null}
+      <SubmitButton
+        className="primary-button green-button"
+        disabled={!canPressSubmit}
+        pendingLabel="報告を送信中..."
+      >
         <CheckCircle2 size={17} />報告を送信する
-      </button>
+      </SubmitButton>
     </form>
   );
 }

@@ -17,7 +17,7 @@ export default async function StaffReportPage({
     supabase
       .from("reservations")
       .select(
-        "id, scheduled_at, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, reservation_staff!inner(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)",
+        "id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, reservation_staff!inner(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)",
       )
       .eq("reservation_staff.staff_id", profile.id)
       .neq("status", "cancelled")
@@ -65,6 +65,8 @@ export default async function StaffReportPage({
           bookings={reservations.map((booking) => ({
             id: booking.id,
             scheduledAt: booking.scheduled_at,
+            customerName: booking.customer_name,
+            customerPhone: booking.customer_phone,
             address: booking.address,
             content: booking.service_content,
             status: booking.status,
