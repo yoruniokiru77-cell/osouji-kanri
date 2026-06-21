@@ -17,6 +17,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { StaffLayout } from "@/components/StaffLayout";
+import { WeeklyScheduleCalendar } from "@/components/WeeklyScheduleCalendar";
 import { requireRole } from "@/lib/auth";
 import { formatCurrency } from "@/lib/finance";
 import { expenseLabels, reservationLabels, statusClass } from "@/lib/labels";
@@ -39,20 +40,21 @@ const dateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
 });
 
 function shiftDate(dateKey: string, days: number) {
-  const date = new Date(`${dateKey}T00:00:00+09:00`);
-  date.setDate(date.getDate() + days);
+  const date = dateFromKey(dateKey);
+  date.setUTCDate(date.getUTCDate() + days);
   return dateKeyFormatter.format(date);
 }
 
 function dateFromKey(dateKey: string) {
-  return new Date(`${dateKey}T00:00:00+09:00`);
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 }
 
 function startOfWeekMonday(dateKey: string) {
   const date = dateFromKey(dateKey);
-  const day = date.getDay();
+  const day = date.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
+  date.setUTCDate(date.getUTCDate() + diff);
   return dateKeyFormatter.format(date);
 }
 
@@ -81,7 +83,17 @@ function createWeekCalendar(
       const dateKey = shiftDate(weekStartKey, dayIndex);
       return {
         dateKey,
-        bookings: bookings.filter((booking) => reservationDateKey(booking.scheduled_at) === dateKey),
+        label: formatWeekDay(dateKey),
+        bookings: bookings
+          .filter((booking) => reservationDateKey(booking.scheduled_at) === dateKey)
+          .map((booking) => ({
+            id: booking.id,
+            scheduledAt: booking.scheduled_at,
+            content: booking.service_content,
+            address: booking.address,
+            customerName: booking.customer_name,
+            customerPhone: booking.customer_phone,
+          })),
       };
     });
 
@@ -101,8 +113,9 @@ function formatShortDate(dateKey: string) {
   }).format(dateFromKey(dateKey));
 }
 
-function formatDayLabel(dateKey: string) {
+function formatWeekDay(dateKey: string) {
   return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
     day: "numeric",
     weekday: "short",
     timeZone: "Asia/Tokyo",
@@ -333,48 +346,7 @@ export default async function StaffDashboard({
               <h2>選択日より後の予定</h2>
               <span>{upcoming.length}件</span>
             </div>
-            <div className="week-calendar-list">
-              {upcomingWeeks.map((week, index) => (
-                <article className="week-calendar" key={week.key}>
-                  <header>
-                    <strong>第{index + 1}週</strong>
-                    <span>{week.label}</span>
-                  </header>
-                  <div className="week-grid">
-                    {week.days.map((day) => (
-                      <div className="week-day" key={day.dateKey}>
-                        <Link className="week-day-header" href={`/staff/dashboard?date=${day.dateKey}`}>
-                          <span>{formatDayLabel(day.dateKey)}</span>
-                          <strong>{day.bookings.length}件</strong>
-                        </Link>
-                        <div className="week-day-items">
-                          {day.bookings.length === 0 ? (
-                            <span className="week-empty">予定なし</span>
-                          ) : (
-                            day.bookings.map((booking) => (
-                              <Link
-                                className="week-booking"
-                                href={`/staff/schedule/${booking.id}`}
-                                key={booking.id}
-                              >
-                                <time>
-                                  {new Date(booking.scheduled_at).toLocaleTimeString("ja-JP", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </time>
-                                <span>{booking.service_content}</span>
-                                <ChevronRight size={13} />
-                              </Link>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              ))}
-            </div>
+            <WeeklyScheduleCalendar weeks={upcomingWeeks} />
           </section>
         ) : null}
 
