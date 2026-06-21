@@ -2,8 +2,7 @@ import { CheckCircle2 } from "lucide-react";
 import { StaffLayout } from "@/components/StaffLayout";
 import { StaffReportForm } from "@/components/StaffReportForm";
 import { requireRole } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
-import type { ReservationWithRelations, Worker } from "@/lib/types";
+import { getCachedStaffReportData } from "@/lib/cached-data";
 
 export default async function StaffReportPage({
   searchParams,
@@ -12,35 +11,7 @@ export default async function StaffReportPage({
 }) {
   const profile = await requireRole("staff");
   const params = await searchParams;
-  const supabase = await createClient();
-  const [reservationResult, latestCashResult, workerResult] = await Promise.all([
-    supabase
-      .from("reservations")
-      .select(
-        "id, scheduled_at, customer_name, customer_phone, address, service_content, status, reservation_staff!inner(staff_id), reservation_workers(worker_id)",
-      )
-      .eq("reservation_staff.staff_id", profile.id)
-      .neq("status", "cancelled")
-      .order("scheduled_at", { ascending: false }),
-    supabase
-      .from("work_reports")
-      .select("change_amount")
-      .eq("staff_id", profile.id)
-      .eq("payment_method", "cash")
-      .not("change_amount", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("workers")
-      .select("id, name, worker_type, default_compensation_type, default_compensation_value, active")
-      .eq("active", true)
-      .order("worker_type")
-      .order("name"),
-  ]);
-  const reservations = (reservationResult.data ?? []) as unknown as ReservationWithRelations[];
-  const workers = (workerResult.data ?? []) as Worker[];
-  const previousChangeAmount = Number(latestCashResult.data?.change_amount ?? 0);
+  const { previousChangeAmount, reservations, workers } = await getCachedStaffReportData(profile.id);
 
   if (params.success === "1") {
     return (

@@ -5,8 +5,8 @@ import { updateStaffReservation } from "@/app/actions";
 import { StaffLayout } from "@/components/StaffLayout";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
+import { getCachedStaffMasters } from "@/lib/cached-data";
 import { createClient } from "@/lib/supabase/server";
-import type { ServiceCategory, ServiceContent, Worker } from "@/lib/types";
 
 function toDateTimeLocal(value: string) {
   const date = new Date(value);
@@ -32,7 +32,7 @@ export default async function StaffScheduleEditPage({
   const profile = await requireRole("staff");
   const { id } = await params;
   const supabase = await createClient();
-  const [reservationResult, categoryResult, workerResult, contentResult] = await Promise.all([
+  const [reservationResult, masters] = await Promise.all([
     supabase
       .from("reservations")
       .select(
@@ -41,27 +41,10 @@ export default async function StaffScheduleEditPage({
       .eq("id", id)
       .eq("reservation_staff.staff_id", profile.id)
       .single(),
-    supabase
-      .from("service_categories")
-      .select("id, name, active")
-      .eq("active", true)
-      .order("name"),
-    supabase
-      .from("workers")
-      .select("id, name, worker_type, default_compensation_type, default_compensation_value, active")
-      .eq("active", true)
-      .order("worker_type")
-      .order("name"),
-    supabase
-      .from("service_contents")
-      .select("id, name, active")
-      .eq("active", true)
-      .order("name"),
+    getCachedStaffMasters(),
   ]);
   const reservation = reservationResult.data;
-  const categories = (categoryResult.data ?? []) as ServiceCategory[];
-  const workers = (workerResult.data ?? []) as Worker[];
-  const contents = (contentResult.data ?? []) as ServiceContent[];
+  const { categories, contents, workers } = masters;
 
   if (!reservation) notFound();
 

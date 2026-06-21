@@ -24,15 +24,10 @@ import { DeleteWorkerForm } from "@/components/DeleteWorkerForm";
 import { DeleteServiceCategoryForm } from "@/components/DeleteServiceCategoryForm";
 import { PurchaseExpenseForm } from "@/components/PurchaseExpenseForm";
 import { requireRole } from "@/lib/auth";
+import { getCachedAdminDashboardData } from "@/lib/cached-data";
 import { calculateSummary, formatCurrency } from "@/lib/finance";
 import { expenseLabels, reservationLabels, statusClass } from "@/lib/labels";
-import { createClient } from "@/lib/supabase/server";
-import type {
-  Expense,
-  ReservationWithRelations,
-  ServiceCategory,
-  Worker,
-} from "@/lib/types";
+import type { ReservationWithRelations } from "@/lib/types";
 
 function monthRange(month: string) {
   const start = new Date(`${month}-01T00:00:00+09:00`);
@@ -77,40 +72,10 @@ export default async function AdminDashboard({
   const params = await searchParams;
   const selectedMonth = params.month ?? new Date().toISOString().slice(0, 7);
   const range = monthRange(selectedMonth);
-  const supabase = await createClient();
-
-  const [workersResult, categoriesResult, reservationsResult, expensesResult] = await Promise.all([
-    supabase
-      .from("workers")
-      .select("id, name, worker_type, default_compensation_type, default_compensation_value, active")
-      .order("worker_type")
-      .order("name"),
-    supabase
-      .from("service_categories")
-      .select("id, name, active")
-      .order("name"),
-    supabase
-      .from("reservations")
-      .select(
-        "id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)",
-      )
-      .gte("scheduled_at", range.start)
-      .lt("scheduled_at", range.end)
-      .order("scheduled_at"),
-    supabase
-      .from("expenses")
-      .select(
-        "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, profiles(id, display_name, role, commission_rate), expense_categories(id, name)",
-      )
-      .gte("created_at", range.start)
-      .lt("created_at", range.end)
-      .order("created_at", { ascending: false }),
-  ]);
-
-  const workers = (workersResult.data ?? []) as Worker[];
-  const categories = (categoriesResult.data ?? []) as ServiceCategory[];
-  const reservations = (reservationsResult.data ?? []) as unknown as ReservationWithRelations[];
-  const expenses = (expensesResult.data ?? []) as unknown as Expense[];
+  const { workers, categories, reservations, expenses } = await getCachedAdminDashboardData(
+    range.start,
+    range.end,
+  );
   const summary = calculateSummary(reservations, expenses);
   const pendingReports = reservations.flatMap((reservation) =>
     reservation.work_reports

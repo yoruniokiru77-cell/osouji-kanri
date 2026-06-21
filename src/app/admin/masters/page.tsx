@@ -3,17 +3,11 @@ import { saveServiceContent } from "@/app/actions";
 import { AdminLayout } from "@/components/AdminLayout";
 import { DeleteServiceContentForm } from "@/components/DeleteServiceContentForm";
 import { requireRole } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
-import type { ServiceContent } from "@/lib/types";
+import { getCachedAdminServiceContents } from "@/lib/cached-data";
 
 export default async function AdminMastersPage() {
   const profile = await requireRole("admin");
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("service_contents")
-    .select("id, name, active")
-    .order("name");
-  const contents = (data ?? []) as ServiceContent[];
+  const contents = await getCachedAdminServiceContents();
 
   return (
     <AdminLayout displayName={profile.display_name}>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { CalendarPlus, ClipboardCheck, House, ReceiptText, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -20,11 +20,16 @@ export function StaffLayout({
   title?: string;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [pendingHref, setPendingHref] = useState("");
 
   useEffect(() => {
     setPendingHref("");
   }, [pathname]);
+
+  useEffect(() => {
+    items.forEach((item) => router.prefetch(item.href));
+  }, [router]);
 
   return (
     <div className="staff-app">

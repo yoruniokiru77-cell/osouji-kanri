@@ -3,8 +3,7 @@ import { createStaffReservation } from "@/app/actions";
 import { StaffLayout } from "@/components/StaffLayout";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
-import type { ServiceCategory, ServiceContent, Tool, Worker } from "@/lib/types";
+import { getCachedStaffMasters } from "@/lib/cached-data";
 
 export default async function StaffSchedulePage({
   searchParams,
@@ -13,30 +12,7 @@ export default async function StaffSchedulePage({
 }) {
   await requireRole("staff");
   const params = await searchParams;
-  const supabase = await createClient();
-  const [toolResult, workerResult, categoryResult, contentResult] = await Promise.all([
-    supabase.from("tools").select("id, name").order("name"),
-    supabase
-      .from("workers")
-      .select("id, name, worker_type, default_compensation_type, default_compensation_value, active")
-      .eq("active", true)
-      .order("worker_type")
-      .order("name"),
-    supabase
-      .from("service_categories")
-      .select("id, name, active")
-      .eq("active", true)
-      .order("name"),
-    supabase
-      .from("service_contents")
-      .select("id, name, active")
-      .eq("active", true)
-      .order("name"),
-  ]);
-  const tools = (toolResult.data ?? []) as Tool[];
-  const workers = (workerResult.data ?? []) as Worker[];
-  const categories = (categoryResult.data ?? []) as ServiceCategory[];
-  const contents = (contentResult.data ?? []) as ServiceContent[];
+  const { categories, contents, tools, workers } = await getCachedStaffMasters();
 
   return (
     <StaffLayout title="予定登録">

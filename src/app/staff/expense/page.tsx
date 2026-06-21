@@ -3,10 +3,9 @@ import { createExpense } from "@/app/actions";
 import { ExpenseFormToggle } from "@/components/ExpenseFormToggle";
 import { StaffLayout } from "@/components/StaffLayout";
 import { requireRole } from "@/lib/auth";
+import { getCachedStaffExpenseData } from "@/lib/cached-data";
 import { formatCurrency } from "@/lib/finance";
 import { expenseLabels, statusClass } from "@/lib/labels";
-import { createClient } from "@/lib/supabase/server";
-import type { Expense, ExpenseCategory, ReservationWithRelations } from "@/lib/types";
 
 export default async function StaffExpensePage({
   searchParams,
@@ -15,28 +14,7 @@ export default async function StaffExpensePage({
 }) {
   const profile = await requireRole("staff");
   const params = await searchParams;
-  const supabase = await createClient();
-  const [categoryResult, reservationResult, expenseResult] = await Promise.all([
-    supabase.from("expense_categories").select("id, name").order("name"),
-    supabase
-      .from("reservations")
-      .select(
-        "id, scheduled_at, customer_name, customer_phone, address, service_content, status, reservation_staff!inner(staff_id)",
-      )
-      .eq("reservation_staff.staff_id", profile.id)
-      .neq("status", "cancelled")
-      .order("scheduled_at", { ascending: false }),
-    supabase
-      .from("expenses")
-      .select(
-        "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, expense_categories(id, name)",
-      )
-      .eq("staff_id", profile.id)
-      .order("created_at", { ascending: false }),
-  ]);
-  const categories = (categoryResult.data ?? []) as ExpenseCategory[];
-  const reservations = (reservationResult.data ?? []) as unknown as ReservationWithRelations[];
-  const expenses = (expenseResult.data ?? []) as unknown as Expense[];
+  const { categories, expenses, reservations } = await getCachedStaffExpenseData(profile.id);
 
   return (
     <StaffLayout title="経費申請">

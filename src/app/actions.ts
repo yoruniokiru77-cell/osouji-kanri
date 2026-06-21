@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile, requireRole } from "@/lib/auth";
+import { CACHE_TAGS, clearCachedData } from "@/lib/cached-data";
 
 function readString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -11,6 +12,27 @@ function readString(formData: FormData, key: string) {
 
 function readNumber(formData: FormData, key: string) {
   return Number(readString(formData, key));
+}
+
+function revalidateStaffData() {
+  clearCachedData(CACHE_TAGS.staff);
+  revalidatePath("/staff/dashboard");
+  revalidatePath("/staff/report");
+  revalidatePath("/staff/expense");
+}
+
+function revalidateAdminData() {
+  clearCachedData(CACHE_TAGS.admin);
+  revalidatePath("/admin/dashboard");
+}
+
+function revalidateMasterData() {
+  clearCachedData(CACHE_TAGS.masters);
+  revalidatePath("/staff/schedule");
+  revalidatePath("/staff/report");
+  revalidatePath("/staff/expense");
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/masters");
 }
 
 export async function signIn(formData: FormData) {
@@ -109,7 +131,8 @@ export async function createReservation(formData: FormData) {
     );
   }
 
-  revalidatePath("/admin/dashboard");
+  revalidateAdminData();
+  revalidateStaffData();
 }
 
 export async function createStaffReservation(formData: FormData) {
@@ -191,7 +214,8 @@ export async function createStaffReservation(formData: FormData) {
     }
   }
 
-  revalidatePath("/staff/dashboard");
+  revalidateStaffData();
+  revalidateAdminData();
   revalidatePath("/staff/schedule");
   redirect("/staff/schedule?success=1");
 }
@@ -226,7 +250,8 @@ export async function updateStaffReservation(formData: FormData) {
   }
 
   const selectedDate = scheduledAt.slice(0, 10);
-  revalidatePath("/staff/dashboard");
+  revalidateStaffData();
+  revalidateAdminData();
   revalidatePath(`/staff/schedule/${reservationId}`);
   redirect(`/staff/dashboard?date=${selectedDate}&updated=1`);
 }
@@ -253,7 +278,9 @@ export async function saveWorker(formData: FormData) {
   const { error } = await query;
   if (error) throw new Error(error.message);
 
-  revalidatePath("/admin/dashboard");
+  revalidateMasterData();
+  revalidateAdminData();
+  revalidateStaffData();
 }
 
 export async function deleteWorker(formData: FormData) {
@@ -279,7 +306,9 @@ export async function deleteWorker(formData: FormData) {
     if (error) throw new Error(error.message);
   }
 
-  revalidatePath("/admin/dashboard");
+  revalidateMasterData();
+  revalidateAdminData();
+  revalidateStaffData();
 }
 
 export async function saveServiceCategory(formData: FormData) {
@@ -299,8 +328,9 @@ export async function saveServiceCategory(formData: FormData) {
   const { error } = await query;
   if (error) throw new Error(error.message);
 
-  revalidatePath("/admin/dashboard");
-  revalidatePath("/staff/schedule");
+  revalidateMasterData();
+  revalidateAdminData();
+  revalidateStaffData();
 }
 
 export async function saveServiceContent(formData: FormData) {
@@ -320,8 +350,7 @@ export async function saveServiceContent(formData: FormData) {
   const { error } = await query;
   if (error) throw new Error(error.message);
 
-  revalidatePath("/admin/masters");
-  revalidatePath("/staff/schedule");
+  revalidateMasterData();
 }
 
 export async function deleteServiceContent(formData: FormData) {
@@ -342,8 +371,7 @@ export async function deleteServiceContent(formData: FormData) {
   const { error } = await query;
   if (error) throw new Error(error.message);
 
-  revalidatePath("/admin/masters");
-  revalidatePath("/staff/schedule");
+  revalidateMasterData();
 }
 
 export async function deleteServiceCategory(formData: FormData) {
@@ -364,8 +392,9 @@ export async function deleteServiceCategory(formData: FormData) {
   const { error } = await query;
   if (error) throw new Error(error.message);
 
-  revalidatePath("/admin/dashboard");
-  revalidatePath("/staff/schedule");
+  revalidateMasterData();
+  revalidateAdminData();
+  revalidateStaffData();
 }
 
 export async function upsertWorkReport(formData: FormData) {
@@ -451,8 +480,8 @@ export async function upsertWorkReport(formData: FormData) {
     throw new Error(error.message);
   }
 
-  revalidatePath("/staff/dashboard");
-  revalidatePath("/staff/report");
+  revalidateStaffData();
+  revalidateAdminData();
   redirect("/staff/report?success=1");
 }
 
@@ -477,7 +506,8 @@ export async function reviewWorkReport(formData: FormData) {
     if (error) throw new Error(error.message);
   }
 
-  revalidatePath("/admin/dashboard");
+  revalidateAdminData();
+  revalidateStaffData();
 }
 
 export async function createExpense(formData: FormData) {
@@ -502,8 +532,8 @@ export async function createExpense(formData: FormData) {
     throw new Error(error.message);
   }
 
-  revalidatePath("/staff/dashboard");
-  revalidatePath("/staff/expense");
+  revalidateStaffData();
+  revalidateAdminData();
   redirect("/staff/expense?success=1");
 }
 
@@ -525,7 +555,8 @@ export async function updateExpenseStatus(formData: FormData) {
     })
     .eq("id", readString(formData, "expense_id"));
 
-  revalidatePath("/admin/dashboard");
+  revalidateAdminData();
+  revalidateStaffData();
 }
 
 export async function routeAfterLogin() {

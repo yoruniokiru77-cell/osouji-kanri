@@ -19,10 +19,10 @@ import {
 import { StaffLayout } from "@/components/StaffLayout";
 import { WeeklyScheduleCalendar } from "@/components/WeeklyScheduleCalendar";
 import { requireRole } from "@/lib/auth";
+import { getCachedStaffDashboardData } from "@/lib/cached-data";
 import { formatCurrency } from "@/lib/finance";
 import { expenseLabels, reservationLabels, statusClass } from "@/lib/labels";
-import { createClient } from "@/lib/supabase/server";
-import type { Expense, ReservationWithRelations } from "@/lib/types";
+import type { ReservationWithRelations } from "@/lib/types";
 
 const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
   year: "numeric",
@@ -129,36 +129,17 @@ export default async function StaffDashboard({
 }) {
   const profile = await requireRole("staff");
   const query = await searchParams;
-  const supabase = await createClient();
   const now = new Date();
   const todayKey = dateKeyFormatter.format(now);
   const selectedDate = isDateKey(query.date) ? query.date! : todayKey;
-  const reservationWindowStart = new Date(`${selectedDate}T00:00:00+09:00`);
+  const reservationWindowStart = dateFromKey(selectedDate);
   const reservationWindowEnd = new Date(reservationWindowStart);
-  reservationWindowEnd.setDate(reservationWindowEnd.getDate() + 90);
-  const [reservationResult, expenseResult] = await Promise.all([
-    supabase
-      .from("reservations")
-      .select(
-        "id, scheduled_at, customer_name, customer_phone, address, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name), reservation_staff!inner(staff_id), reservation_workers(worker_id, workers(id, name)), reservation_tools(tool_id)",
-      )
-      .eq("reservation_staff.staff_id", profile.id)
-      .neq("status", "cancelled")
-      .gte("scheduled_at", reservationWindowStart.toISOString())
-      .lt("scheduled_at", reservationWindowEnd.toISOString())
-      .order("scheduled_at"),
-    supabase
-      .from("expenses")
-      .select(
-        "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, expense_categories(id, name)",
-      )
-      .eq("staff_id", profile.id)
-      .order("created_at", { ascending: false })
-      .limit(3),
-  ]);
-
-  const reservations = (reservationResult.data ?? []) as unknown as ReservationWithRelations[];
-  const expenses = (expenseResult.data ?? []) as unknown as Expense[];
+  reservationWindowEnd.setUTCDate(reservationWindowEnd.getUTCDate() + 90);
+  const { reservations, expenses } = await getCachedStaffDashboardData(
+    profile.id,
+    reservationWindowStart.toISOString(),
+    reservationWindowEnd.toISOString(),
+  );
   const reservationDateKey = (value: string) => dateKeyFormatter.format(new Date(value));
   const selectedBookings = reservations.filter(
     (item) => reservationDateKey(item.scheduled_at) === selectedDate,
