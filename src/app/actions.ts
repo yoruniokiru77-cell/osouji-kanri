@@ -480,6 +480,17 @@ export async function upsertWorkReport(formData: FormData) {
     throw new Error(error.message);
   }
 
+  if (paymentMethod === "cash") {
+    const { error: cashBalanceError } = await supabase.from("staff_cash_balances").upsert({
+      staff_id: profile.id,
+      change_amount: changeAmount,
+    });
+
+    if (cashBalanceError) {
+      throw new Error(cashBalanceError.message);
+    }
+  }
+
   revalidateStaffData();
   revalidateAdminData();
   redirect("/staff/report?success=1");

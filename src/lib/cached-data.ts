@@ -133,7 +133,7 @@ export async function getCachedStaffDashboardData(staffId: string, startIso: str
 export async function getCachedStaffReportData(staffId: string) {
   return apiGetCached(`staff-report:${staffId}`, [CACHE_TAGS.staff, CACHE_TAGS.masters], async () => {
     const supabase = await createClient();
-    const [reservationResult, latestCashResult, workerResult] = await Promise.all([
+    const [reservationResult, latestCashResult, cashBalanceResult, workerResult] = await Promise.all([
       supabase
         .from("reservations")
         .select(
@@ -152,6 +152,11 @@ export async function getCachedStaffReportData(staffId: string) {
         .limit(1)
         .maybeSingle(),
       supabase
+        .from("staff_cash_balances")
+        .select("change_amount")
+        .eq("staff_id", staffId)
+        .maybeSingle(),
+      supabase
         .from("workers")
         .select("id, name, worker_type, default_compensation_type, default_compensation_value, active")
         .eq("active", true)
@@ -160,7 +165,9 @@ export async function getCachedStaffReportData(staffId: string) {
     ]);
 
     return {
-      previousChangeAmount: Number(latestCashResult.data?.change_amount ?? 0),
+      previousChangeAmount: Number(
+        latestCashResult.data?.change_amount ?? cashBalanceResult.data?.change_amount ?? 0,
+      ),
       reservations: (reservationResult.data ?? []) as unknown as ReservationWithRelations[],
       workers: (workerResult.data ?? []) as Worker[],
     };
