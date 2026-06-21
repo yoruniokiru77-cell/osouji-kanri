@@ -44,8 +44,69 @@ function shiftDate(dateKey: string, days: number) {
   return dateKeyFormatter.format(date);
 }
 
+function dateFromKey(dateKey: string) {
+  return new Date(`${dateKey}T00:00:00+09:00`);
+}
+
+function startOfWeekMonday(dateKey: string) {
+  const date = dateFromKey(dateKey);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  return dateKeyFormatter.format(date);
+}
+
 function isDateKey(value?: string) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function createWeekCalendar(
+  startDateKey: string,
+  bookings: ReservationWithRelations[],
+  reservationDateKey: (value: string) => string,
+) {
+  if (bookings.length === 0) return [];
+
+  const firstWeekStartKey = startOfWeekMonday(shiftDate(startDateKey, 1));
+  const firstDate = dateFromKey(firstWeekStartKey);
+  const lastDate = dateFromKey(reservationDateKey(bookings[bookings.length - 1].scheduled_at));
+  const weekCount = Math.max(
+    1,
+    Math.ceil((lastDate.getTime() - firstDate.getTime() + 1) / (7 * 24 * 60 * 60 * 1000)),
+  );
+
+  return Array.from({ length: weekCount }, (_, weekIndex) => {
+    const weekStartKey = shiftDate(firstWeekStartKey, weekIndex * 7);
+    const days = Array.from({ length: 7 }, (_, dayIndex) => {
+      const dateKey = shiftDate(weekStartKey, dayIndex);
+      return {
+        dateKey,
+        bookings: bookings.filter((booking) => reservationDateKey(booking.scheduled_at) === dateKey),
+      };
+    });
+
+    return {
+      key: weekStartKey,
+      label: `${formatShortDate(weekStartKey)} - ${formatShortDate(shiftDate(weekStartKey, 6))}`,
+      days,
+    };
+  });
+}
+
+function formatShortDate(dateKey: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    timeZone: "Asia/Tokyo",
+  }).format(dateFromKey(dateKey));
+}
+
+function formatDayLabel(dateKey: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    day: "numeric",
+    weekday: "short",
+    timeZone: "Asia/Tokyo",
+  }).format(dateFromKey(dateKey));
 }
 
 export default async function StaffDashboard({
@@ -92,6 +153,7 @@ export default async function StaffDashboard({
   const upcoming = reservations.filter(
     (item) => reservationDateKey(item.scheduled_at) > selectedDate,
   );
+  const upcomingWeeks = createWeekCalendar(selectedDate, upcoming, reservationDateKey);
   const pendingCount = expenses.filter((item) => item.status === "requested").length;
   const selectedDateLabel = new Intl.DateTimeFormat("ja-JP", {
     month: "long",
@@ -125,7 +187,7 @@ export default async function StaffDashboard({
             >
               <ChevronLeft size={18} />
             </Link>
-            <form action="/staff/dashboard" className="date-picker-form">
+            <form action="/staff/dashboard" className="date-picker-form" key={selectedDate}>
               <CalendarDays size={16} />
               <input
                 aria-label="表示する日付"
@@ -271,29 +333,46 @@ export default async function StaffDashboard({
               <h2>選択日より後の予定</h2>
               <span>{upcoming.length}件</span>
             </div>
-            <div className="compact-list">
-              {upcoming.map((booking) => (
-                <Link className="compact-card" href={`/staff/schedule/${booking.id}`} key={booking.id}>
-                  <div className="compact-date">
-                    <span>
-                      {new Date(booking.scheduled_at).toLocaleDateString("ja-JP", {
-                        month: "numeric",
-                        day: "numeric",
-                      })}
-                    </span>
-                    <strong>
-                      {new Date(booking.scheduled_at).toLocaleTimeString("ja-JP", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </strong>
+            <div className="week-calendar-list">
+              {upcomingWeeks.map((week, index) => (
+                <article className="week-calendar" key={week.key}>
+                  <header>
+                    <strong>第{index + 1}週</strong>
+                    <span>{week.label}</span>
+                  </header>
+                  <div className="week-grid">
+                    {week.days.map((day) => (
+                      <div className="week-day" key={day.dateKey}>
+                        <Link className="week-day-header" href={`/staff/dashboard?date=${day.dateKey}`}>
+                          <span>{formatDayLabel(day.dateKey)}</span>
+                          <strong>{day.bookings.length}件</strong>
+                        </Link>
+                        <div className="week-day-items">
+                          {day.bookings.length === 0 ? (
+                            <span className="week-empty">予定なし</span>
+                          ) : (
+                            day.bookings.map((booking) => (
+                              <Link
+                                className="week-booking"
+                                href={`/staff/schedule/${booking.id}`}
+                                key={booking.id}
+                              >
+                                <time>
+                                  {new Date(booking.scheduled_at).toLocaleTimeString("ja-JP", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </time>
+                                <span>{booking.service_content}</span>
+                                <ChevronRight size={13} />
+                              </Link>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <strong>{booking.service_content}</strong>
-                    <small>{booking.address}</small>
-                  </div>
-                  <ChevronRight size={16} />
-                </Link>
+                </article>
               ))}
             </div>
           </section>
