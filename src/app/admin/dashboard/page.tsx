@@ -196,7 +196,7 @@ export default async function AdminDashboard({
                       <span>
                         前回釣銭 {formatCurrency(Number(report.previous_change_amount))} /
                         今回釣銭 {formatCurrency(Number(report.change_amount))} /
-                        回収現金 {formatCurrency(Number(report.cash_collected_amount))}
+                        管理者へ渡す {formatCurrency(Number(report.cash_collected_amount))}
                       </span>
                     ) : null}
                   </div>

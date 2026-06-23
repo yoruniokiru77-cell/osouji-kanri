@@ -426,24 +426,23 @@ export async function upsertWorkReport(formData: FormData) {
   const paymentMethod = readString(formData, "payment_method");
   const cardStatementUrl = readString(formData, "card_statement_url") || null;
   const previousChangeAmount = readNumber(formData, "previous_change_amount");
-  const changeAmount = readNumber(formData, "change_amount");
   const cashCollectedAmount = readNumber(formData, "cash_collected_amount");
+  let changeAmount = readNumber(formData, "change_amount");
 
   if (paymentMethod === "card" && !cardStatementUrl) {
     throw new Error("カード決済の明細画像を添付してください");
   }
 
   if (paymentMethod === "cash") {
-    const values = [previousChangeAmount, changeAmount, cashCollectedAmount];
+    const values = [previousChangeAmount, cashCollectedAmount];
     if (values.some((value) => !Number.isInteger(value) || value < 0)) {
-      throw new Error("釣銭と現金回収額を0円以上の整数で入力してください");
+      throw new Error("釣銭と管理者へ渡す金額を0円以上の整数で入力してください");
     }
-    const expectedCash = changeAmount - previousChangeAmount + reportedAmount;
-    if (cashCollectedAmount !== expectedCash) {
-      throw new Error(
-        `現金が一致しません。今回釣銭 - 前回釣銭 + 売上は${expectedCash}円です`,
-      );
+    const currentCashBalance = previousChangeAmount + reportedAmount;
+    if (cashCollectedAmount > currentCashBalance) {
+      throw new Error("管理者へ渡す金額が現在の残高を超えています");
     }
+    changeAmount = currentCashBalance - cashCollectedAmount;
   }
 
   const { error: workerError } = await supabase.rpc("replace_own_reservation_workers", {
