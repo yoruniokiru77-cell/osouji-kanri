@@ -5,6 +5,7 @@ import type {
   ReservationWithRelations,
   ServiceCategory,
   ServiceContent,
+  ServiceContentTool,
   Tool,
   Worker,
 } from "@/lib/types";
@@ -58,7 +59,7 @@ export function clearCachedData(...tags: string[]) {
 export async function getCachedStaffMasters() {
   return apiGetCached("staff-masters", [CACHE_TAGS.masters], async () => {
     const supabase = await createClient();
-    const [toolResult, workerResult, categoryResult, contentResult] = await Promise.all([
+    const [toolResult, workerResult, categoryResult, contentResult, contentToolResult] = await Promise.all([
       supabase.from("tools").select("id, name").order("name"),
       supabase
         .from("workers")
@@ -76,11 +77,13 @@ export async function getCachedStaffMasters() {
         .select("id, name, active")
         .eq("active", true)
         .order("name"),
+      supabase.from("service_content_tools").select("service_content_id, tool_id"),
     ]);
 
     return {
       categories: (categoryResult.data ?? []) as ServiceCategory[],
       contents: (contentResult.data ?? []) as ServiceContent[],
+      serviceContentTools: (contentToolResult.data ?? []) as ServiceContentTool[],
       tools: (toolResult.data ?? []) as Tool[],
       workers: (workerResult.data ?? []) as Worker[],
     };

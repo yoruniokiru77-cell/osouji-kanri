@@ -14,6 +14,92 @@ function readNumber(formData: FormData, key: string) {
   return Number(readString(formData, key));
 }
 
+type ServiceItemInput = {
+  custom_name: string | null;
+  service_content_id: string | null;
+  quantity: number;
+  sort_order: number;
+};
+
+function readServiceItems(formData: FormData) {
+  const ids = formData.getAll("service_content_ids").map(String);
+  const quantities = formData.getAll("service_quantities").map(String);
+  const customNames = formData.getAll("service_custom_names").map(String);
+  const seen = new Set<string>();
+  const items: ServiceItemInput[] = [];
+
+  ids.forEach((id, index) => {
+    const selectedId = id.trim();
+    if (!selectedId) return;
+    const quantity = Number(quantities[index] ?? 1);
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      throw new Error("作業内容の台数・数量は1以上の整数で入力してください");
+    }
+    const isOther = selectedId === "__other__";
+    const customName = String(customNames[index] ?? "").trim();
+    if (isOther && !customName) {
+      throw new Error("その他を選んだ場合は作業内容を入力してください");
+    }
+
+    const dedupeKey = isOther ? `custom:${customName}` : `master:${selectedId}`;
+    if (seen.has(dedupeKey)) return;
+    seen.add(dedupeKey);
+    items.push({
+      custom_name: isOther ? customName : null,
+      quantity,
+      service_content_id: isOther ? null : selectedId,
+      sort_order: items.length,
+    });
+  });
+
+  if (items.length === 0) {
+    throw new Error("作業内容を1つ以上選択してください");
+  }
+
+  return items;
+}
+
+function buildServiceContentLabel(
+  serviceItems: ServiceItemInput[],
+  serviceContents: { id: string; name: string }[],
+) {
+  const names = new Map(serviceContents.map((content) => [content.id, content.name]));
+  return serviceItems
+    .map((item) => {
+      const name = item.service_content_id ? names.get(item.service_content_id) : item.custom_name;
+      if (!name) return null;
+      return item.quantity > 1 ? `${name} x${item.quantity}` : name;
+    })
+    .filter(Boolean)
+    .join("、");
+}
+
+async function getToolIdsWithAutoMappings(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  serviceItems: ServiceItemInput[],
+  manualToolIds: string[],
+) {
+  const toolIds = new Set(manualToolIds.filter(Boolean));
+  const serviceContentIds = serviceItems
+    .map((item) => item.service_content_id)
+    .filter((id): id is string => Boolean(id));
+  if (serviceContentIds.length === 0) return [...toolIds];
+  const { data } = await supabase
+    .from("service_content_tools")
+    .select("tool_id")
+    .in("service_content_id", serviceContentIds);
+
+  for (const mapping of data ?? []) {
+    if (mapping.tool_id) toolIds.add(mapping.tool_id);
+  }
+
+  return [...toolIds];
+}
+
+function readCustomToolNames(formData: FormData) {
+  return [...new Set(formData.getAll("custom_tool_names").map(String).map((name) => name.trim()).filter(Boolean))];
+}
+
 function revalidateStaffData() {
   clearCachedData(CACHE_TAGS.staff);
   revalidatePath("/staff/dashboard");
@@ -138,25 +224,34 @@ export async function createReservation(formData: FormData) {
 export async function createStaffReservation(formData: FormData) {
   const profile = await requireRole("staff");
   const supabase = await createClient();
-  const toolIds = formData.getAll("tool_ids").map(String);
+  const manualToolIds = formData.getAll("tool_ids").map(String);
+  const customToolNames = readCustomToolNames(formData);
   const workerIds = formData.getAll("worker_ids").map(String);
   const reservationId = crypto.randomUUID();
-  const serviceContentId = readString(formData, "service_content_id");
+  const serviceItems = readServiceItems(formData);
+  const serviceContentIds = serviceItems
+    .map((item) => item.service_content_id)
+    .filter((id): id is string => Boolean(id));
 
   if (workerIds.length === 0) {
     throw new Error("作業担当者を1人以上選択してください");
   }
 
-  const { data: serviceContent } = await supabase
-    .from("service_contents")
-    .select("id, name")
-    .eq("id", serviceContentId)
-    .eq("active", true)
-    .single();
+  const { data: serviceContents } =
+    serviceContentIds.length > 0
+      ? await supabase
+          .from("service_contents")
+          .select("id, name")
+          .in("id", serviceContentIds)
+          .eq("active", true)
+      : { data: [] };
 
-  if (!serviceContent) {
+  if (!serviceContents || serviceContents.length !== serviceContentIds.length) {
     throw new Error("作業内容を選択してください");
   }
+
+  const serviceContentLabel = buildServiceContentLabel(serviceItems, serviceContents);
+  const toolIds = await getToolIdsWithAutoMappings(supabase, serviceItems, manualToolIds);
 
   const { error } = await supabase
     .from("reservations")
@@ -167,8 +262,8 @@ export async function createStaffReservation(formData: FormData) {
       customer_phone: readString(formData, "customer_phone") || null,
       address: readString(formData, "address"),
       amount: 0,
-      service_content: serviceContent.name,
-      service_content_id: serviceContent.id,
+      service_content: serviceContentLabel,
+      service_content_id: serviceItems.find((item) => item.service_content_id)?.service_content_id ?? null,
       service_category_id: readString(formData, "service_category_id"),
       parking_available: readString(formData, "parking_available") === "true",
       parking_notes: readString(formData, "parking_notes") || null,
@@ -188,6 +283,19 @@ export async function createStaffReservation(formData: FormData) {
 
   if (assignmentError) {
     throw new Error(assignmentError.message);
+  }
+
+  const { error: serviceItemError } = await supabase.from("reservation_service_contents").insert(
+    serviceItems.map((item) => ({
+      quantity: item.quantity,
+      reservation_id: reservationId,
+      custom_name: item.custom_name,
+      service_content_id: item.service_content_id,
+      sort_order: item.sort_order,
+    })),
+  );
+  if (serviceItemError) {
+    throw new Error(serviceItemError.message);
   }
 
   if (toolIds.length > 0) {
@@ -214,6 +322,19 @@ export async function createStaffReservation(formData: FormData) {
     }
   }
 
+  if (customToolNames.length > 0) {
+    const { error: customToolError } = await supabase.from("reservation_custom_tools").insert(
+      customToolNames.map((name, index) => ({
+        name,
+        reservation_id: reservationId,
+        sort_order: index,
+      })),
+    );
+    if (customToolError) {
+      throw new Error(customToolError.message);
+    }
+  }
+
   revalidateStaffData();
   revalidateAdminData();
   revalidatePath("/staff/schedule");
@@ -225,6 +346,13 @@ export async function updateStaffReservation(formData: FormData) {
   const supabase = await createClient();
   const reservationId = readString(formData, "reservation_id");
   const workerIds = [...new Set(formData.getAll("worker_ids").map(String).filter(Boolean))];
+  const serviceItems = readServiceItems(formData);
+  const customToolNames = readCustomToolNames(formData);
+  const toolIds = await getToolIdsWithAutoMappings(
+    supabase,
+    serviceItems,
+    formData.getAll("tool_ids").map(String),
+  );
   const scheduledAt = readString(formData, "scheduled_at");
 
   if (workerIds.length === 0) {
@@ -241,7 +369,9 @@ export async function updateStaffReservation(formData: FormData) {
     target_reservation_id: reservationId,
     target_scheduled_at: `${scheduledAt}:00+09:00`,
     target_service_category_id: readString(formData, "service_category_id"),
-    target_service_content_id: readString(formData, "service_content_id"),
+    target_service_items: serviceItems,
+    target_custom_tool_names: customToolNames,
+    target_tool_ids: toolIds,
     target_worker_ids: workerIds,
   });
 

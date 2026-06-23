@@ -31,6 +31,18 @@ export type ServiceContent = {
   active: boolean;
 };
 
+export type ServiceContentTool = {
+  service_content_id: string;
+  tool_id: string;
+};
+
+export type ReservationServiceContent = {
+  service_content_id: string | null;
+  custom_name: string | null;
+  quantity: number;
+  sort_order: number;
+};
+
 export type WorkerType = "employee" | "contractor";
 export type CompensationType = "percentage" | "fixed";
 
@@ -73,6 +85,8 @@ export type ReservationWithRelations = Reservation & {
     compensation_value: number | null;
     workers: Worker | null;
   }[];
+  reservation_service_contents?: ReservationServiceContent[];
+  reservation_custom_tools?: { name: string; sort_order: number }[];
   reservation_tools: { tools: Tool | null }[];
   work_reports: WorkReport[];
 };

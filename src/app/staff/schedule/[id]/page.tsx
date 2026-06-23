@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import { notFound } from "next/navigation";
 import { updateStaffReservation } from "@/app/actions";
+import { ReservationWorkItemsFieldset } from "@/components/ReservationWorkItemsFieldset";
 import { StaffLayout } from "@/components/StaffLayout";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
@@ -36,7 +37,7 @@ export default async function StaffScheduleEditPage({
     supabase
       .from("reservations")
       .select(
-        "id, scheduled_at, customer_name, customer_phone, address, service_content, service_content_id, service_category_id, parking_available, parking_notes, notes, status, reservation_staff!inner(staff_id), reservation_workers(worker_id)",
+        "id, scheduled_at, customer_name, customer_phone, address, service_content, service_content_id, service_category_id, parking_available, parking_notes, notes, status, reservation_staff!inner(staff_id), reservation_workers(worker_id), reservation_service_contents(service_content_id, custom_name, quantity, sort_order), reservation_tools(tool_id), reservation_custom_tools(name, sort_order)",
       )
       .eq("id", id)
       .eq("reservation_staff.staff_id", profile.id)
@@ -44,7 +45,7 @@ export default async function StaffScheduleEditPage({
     getCachedStaffMasters(),
   ]);
   const reservation = reservationResult.data;
-  const { categories, contents, workers } = masters;
+  const { categories, contents, serviceContentTools, tools, workers } = masters;
 
   if (!reservation) notFound();
 
@@ -52,6 +53,16 @@ export default async function StaffScheduleEditPage({
   const selectedWorkerIds = new Set(
     (reservation.reservation_workers ?? []).map((assignment) => assignment.worker_id),
   );
+  const initialWorkItems =
+    reservation.reservation_service_contents && reservation.reservation_service_contents.length > 0
+      ? [...reservation.reservation_service_contents].sort((a, b) => a.sort_order - b.sort_order)
+      : reservation.service_content_id
+        ? [{ service_content_id: reservation.service_content_id, quantity: 1, sort_order: 0 }]
+        : [];
+  const initialToolIds = (reservation.reservation_tools ?? []).map((tool) => tool.tool_id);
+  const initialCustomToolNames = [...(reservation.reservation_custom_tools ?? [])]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((tool) => tool.name);
 
   return (
     <StaffLayout title="予定を編集">
@@ -107,19 +118,14 @@ export default async function StaffScheduleEditPage({
                 ))}
               </select>
             </label>
-            <label>
-              <span>作業内容 *</span>
-              <select
-                defaultValue={reservation.service_content_id ?? ""}
-                name="service_content_id"
-                required
-              >
-                <option disabled value="">作業内容を選択</option>
-                {contents.map((content) => (
-                  <option key={content.id} value={content.id}>{content.name}</option>
-                ))}
-              </select>
-            </label>
+            <ReservationWorkItemsFieldset
+              contents={contents}
+              initialCustomToolNames={initialCustomToolNames}
+              initialManualToolIds={initialToolIds}
+              initialWorkItems={initialWorkItems}
+              serviceContentTools={serviceContentTools}
+              tools={tools}
+            />
             <fieldset className="tool-fieldset">
               <legend>作業担当者 *（複数選択可）</legend>
               <div className="worker-options">

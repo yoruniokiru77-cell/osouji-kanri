@@ -1,6 +1,7 @@
 import { CalendarPlus } from "lucide-react";
 import { createStaffReservation } from "@/app/actions";
 import { StaffLayout } from "@/components/StaffLayout";
+import { ReservationWorkItemsFieldset } from "@/components/ReservationWorkItemsFieldset";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
 import { getCachedStaffMasters } from "@/lib/cached-data";
@@ -12,7 +13,7 @@ export default async function StaffSchedulePage({
 }) {
   await requireRole("staff");
   const params = await searchParams;
-  const { categories, contents, tools, workers } = await getCachedStaffMasters();
+  const { categories, contents, serviceContentTools, tools, workers } = await getCachedStaffMasters();
 
   return (
     <StaffLayout title="予定登録">
@@ -47,15 +48,11 @@ export default async function StaffSchedulePage({
               ))}
             </select>
           </label>
-          <label>
-            <span>作業内容 *</span>
-            <select defaultValue="" name="service_content_id" required>
-              <option disabled value="">作業内容を選択</option>
-              {contents.map((content) => (
-                <option key={content.id} value={content.id}>{content.name}</option>
-              ))}
-            </select>
-          </label>
+          <ReservationWorkItemsFieldset
+            contents={contents}
+            serviceContentTools={serviceContentTools}
+            tools={tools}
+          />
           <fieldset className="tool-fieldset">
             <legend>作業担当者 *（複数選択可）</legend>
             <div className="worker-options">
@@ -89,17 +86,6 @@ export default async function StaffSchedulePage({
               駐車位置や、駐車場がない場合の停車場所を記入できます。
             </small>
           </label>
-          <fieldset className="tool-fieldset">
-            <legend>必要な道具</legend>
-            <div className="tool-options">
-              {tools.map((tool) => (
-                <label key={tool.id}>
-                  <input name="tool_ids" type="checkbox" value={tool.id} />
-                  <span>{tool.name}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
           <label>
             <span>備考・注意事項</span>
             <textarea name="notes" placeholder="訪問時の注意事項など" rows={4} />
