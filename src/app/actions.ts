@@ -349,7 +349,7 @@ export async function createStaffReservation(formData: FormData) {
   revalidateStaffData();
   revalidateAdminData();
   revalidatePath("/staff/schedule");
-  redirect("/staff/schedule?success=1");
+  redirect(`/staff/dashboard?date=${readString(formData, "scheduled_at").slice(0, 10)}&created=${Date.now()}`);
 }
 
 export async function updateStaffReservation(formData: FormData) {

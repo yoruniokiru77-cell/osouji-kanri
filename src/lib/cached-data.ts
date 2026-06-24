@@ -102,8 +102,13 @@ export async function getCachedAdminServiceContents() {
   });
 }
 
-export async function getCachedStaffDashboardData(staffId: string, startIso: string, endIso: string) {
-  return apiGetCached(`staff-dashboard:${staffId}:${startIso}:${endIso}`, [CACHE_TAGS.staff], async () => {
+export async function getCachedStaffDashboardData(
+  staffId: string,
+  startIso: string,
+  endIso: string,
+  cacheVersion = "",
+) {
+  return apiGetCached(`staff-dashboard:${staffId}:${startIso}:${endIso}:${cacheVersion}`, [CACHE_TAGS.staff], async () => {
     const supabase = await createClient();
     const [reservationResult, expenseResult] = await Promise.all([
       supabase
