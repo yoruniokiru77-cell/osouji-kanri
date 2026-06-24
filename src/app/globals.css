@@ -924,6 +924,21 @@ button:disabled { cursor: wait; opacity: .72; }
 }
 .receipt-upload input { display: none; }
 .form-error { color: #ff9ca1; }
+.form-error-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 107, 116, .45);
+  border-radius: 6px;
+  background: rgba(255, 107, 116, .12);
+  color: #ffd4d7;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+.form-error-box svg { flex: 0 0 auto; margin-top: 1px; color: #ff9ca1; }
 .text-link { color: #8eb8ff; font-size: 10px; font-weight: 800; }
 .worker-create-form {
   display: grid;

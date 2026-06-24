@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { StaffLayout } from "@/components/StaffLayout";
 import { StaffReportForm } from "@/components/StaffReportForm";
 import { requireRole } from "@/lib/auth";
@@ -7,7 +7,7 @@ import { getCachedStaffReportData } from "@/lib/cached-data";
 export default async function StaffReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string; booking?: string }>;
+  searchParams: Promise<{ success?: string; booking?: string; error?: string }>;
 }) {
   const profile = await requireRole("staff");
   const params = await searchParams;
@@ -30,6 +30,12 @@ export default async function StaffReportPage({
     <StaffLayout title="実績報告">
       <div className="mobile-page">
         <p className="page-lead">作業完了後に売上、決済情報、作業内容を入力してください。</p>
+        {params.error ? (
+          <div className="form-error-box">
+            <AlertCircle size={18} />
+            <span>{params.error}</span>
+          </div>
+        ) : null}
         <StaffReportForm
           initialBookingId={params.booking}
           previousChangeAmount={previousChangeAmount}

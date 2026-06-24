@@ -106,9 +106,15 @@ function readCustomSupporters(formData: FormData) {
   const amount = readNumber(formData, "custom_supporter_amount");
   if (!name) return [];
   if (!Number.isInteger(amount) || amount <= 0) {
-    throw new Error("その他の応援者金額は1円以上の整数で入力してください");
+    return [];
   }
   return [{ amount, name }];
+}
+
+function redirectWorkReportError(message: string, reservationId?: string) {
+  const params = new URLSearchParams({ error: message });
+  if (reservationId) params.set("booking", reservationId);
+  redirect(`/staff/report?${params.toString()}`);
 }
 
 function revalidateStaffData() {
@@ -574,14 +580,14 @@ export async function upsertWorkReport(formData: FormData) {
   const customSupporters = readCustomSupporters(formData);
 
   if (workerIds.length === 0) {
-    throw new Error("当日の作業担当者を1人以上選択してください");
+    redirectWorkReportError("当日の作業担当者を1人以上選択してください", reservationId);
   }
   if (
     readString(formData, "has_supporter") === "true" &&
     normalizedSupportWorkerIds.length === 0 &&
     customSupporters.length === 0
   ) {
-    throw new Error("応援者ありの場合は、作業者を選択するか、その他の名前と金額を入力してください");
+    redirectWorkReportError("応援者ありの場合は、作業者を選択するか、その他の名前と金額を入力してください", reservationId);
   }
 
   const { data: assignment } = await supabase
@@ -592,12 +598,12 @@ export async function upsertWorkReport(formData: FormData) {
     .single();
 
   if (!assignment) {
-    throw new Error("担当していない予約には報告できません");
+    redirectWorkReportError("担当していない予約には報告できません", reservationId);
   }
 
   const reportedAmount = readNumber(formData, "reported_amount");
   if (!Number.isInteger(reportedAmount) || reportedAmount <= 0) {
-    throw new Error("売上金額は1円以上の整数で入力してください");
+    redirectWorkReportError("売上金額は1円以上の整数で入力してください", reservationId);
   }
 
   const paymentMethod = readString(formData, "payment_method");
@@ -608,16 +614,16 @@ export async function upsertWorkReport(formData: FormData) {
   let changeAmount = readNumber(formData, "change_amount");
 
   if (paymentMethod === "card" && !cardStatementUrl) {
-    throw new Error("カード決済の明細画像を添付してください");
+    redirectWorkReportError("カード決済の明細画像を添付してください", reservationId);
   }
 
   if (paymentMethod === "cash") {
     const values = [previousChangeAmount, currentCashBalance, cashCollectedAmount];
     if (values.some((value) => !Number.isInteger(value) || value < 0)) {
-      throw new Error("釣銭、現在の残高、管理者へ渡す金額を0円以上の整数で入力してください");
+      redirectWorkReportError("釣銭、現在の残高、管理者へ渡す金額を0円以上の整数で入力してください", reservationId);
     }
     if (cashCollectedAmount > currentCashBalance) {
-      throw new Error("管理者へ渡す金額が現在の残高を超えています");
+      redirectWorkReportError("管理者へ渡す金額が現在の残高を超えています", reservationId);
     }
     changeAmount = currentCashBalance - cashCollectedAmount;
   }
@@ -630,7 +636,7 @@ export async function upsertWorkReport(formData: FormData) {
   });
 
   if (workerError) {
-    throw new Error(workerError.message);
+    redirectWorkReportError(`作業者情報を更新できませんでした: ${workerError.message}`, reservationId);
   }
 
   const { error } = await supabase.from("work_reports").upsert(
@@ -656,7 +662,7 @@ export async function upsertWorkReport(formData: FormData) {
   );
 
   if (error) {
-    throw new Error(error.message);
+    redirectWorkReportError(`報告を保存できませんでした: ${error.message}`, reservationId);
   }
 
   if (paymentMethod === "cash") {
@@ -666,7 +672,7 @@ export async function upsertWorkReport(formData: FormData) {
     });
 
     if (cashBalanceError) {
-      throw new Error(cashBalanceError.message);
+      redirectWorkReportError(`次回繰越金額を保存できませんでした: ${cashBalanceError.message}`, reservationId);
     }
   }
 
