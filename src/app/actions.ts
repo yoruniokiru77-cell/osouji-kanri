@@ -100,6 +100,17 @@ function readCustomToolNames(formData: FormData) {
   return [...new Set(formData.getAll("custom_tool_names").map(String).map((name) => name.trim()).filter(Boolean))];
 }
 
+function readCustomSupporters(formData: FormData) {
+  if (readString(formData, "has_supporter") !== "true") return [];
+  const name = readString(formData, "custom_supporter_name");
+  const amount = readNumber(formData, "custom_supporter_amount");
+  if (!name) return [];
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error("その他の応援者金額は1円以上の整数で入力してください");
+  }
+  return [{ amount, name }];
+}
+
 function revalidateStaffData() {
   clearCachedData(CACHE_TAGS.staff);
   revalidatePath("/staff/dashboard");
@@ -531,10 +542,23 @@ export async function upsertWorkReport(formData: FormData) {
   const profile = await requireRole("staff");
   const supabase = await createClient();
   const reservationId = readString(formData, "reservation_id");
-  const workerIds = [...new Set(formData.getAll("worker_ids").map(String).filter(Boolean))];
+  const baseWorkerIds = formData.getAll("worker_ids").map(String).filter(Boolean);
+  const supportWorkerIds =
+    readString(formData, "has_supporter") === "true"
+      ? formData.getAll("support_worker_ids").map(String).filter(Boolean)
+      : [];
+  const workerIds = [...new Set([...baseWorkerIds, ...supportWorkerIds])];
+  const customSupporters = readCustomSupporters(formData);
 
   if (workerIds.length === 0) {
     throw new Error("当日の作業担当者を1人以上選択してください");
+  }
+  if (
+    readString(formData, "has_supporter") === "true" &&
+    supportWorkerIds.length === 0 &&
+    customSupporters.length === 0
+  ) {
+    throw new Error("応援者ありの場合は、作業者を選択するか、その他の名前と金額を入力してください");
   }
 
   const { data: assignment } = await supabase
@@ -576,6 +600,7 @@ export async function upsertWorkReport(formData: FormData) {
   }
 
   const { error: workerError } = await supabase.rpc("replace_own_reservation_workers", {
+    target_custom_supporters: customSupporters,
     target_reservation_id: reservationId,
     target_worker_ids: workerIds,
   });

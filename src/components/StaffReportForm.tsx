@@ -34,6 +34,10 @@ export function StaffReportForm({
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>(
     bookings.find((booking) => booking.id === initialBookingId)?.workerIds ?? [],
   );
+  const [hasSupporter, setHasSupporter] = useState(false);
+  const [supporterWorkerIds, setSupporterWorkerIds] = useState<string[]>([]);
+  const [customSupporterName, setCustomSupporterName] = useState("");
+  const [customSupporterAmountInput, setCustomSupporterAmountInput] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [reportedAmountInput, setReportedAmountInput] = useState("");
   const [cashCollectedAmountInput, setCashCollectedAmountInput] = useState("");
@@ -43,6 +47,7 @@ export function StaffReportForm({
   const [submitMessage, setSubmitMessage] = useState("");
   const selected = bookings.find((booking) => booking.id === selectedId);
   const reportedAmount = Number(reportedAmountInput || 0);
+  const customSupporterAmount = Number(customSupporterAmountInput || 0);
   const cashCollectedAmount = Number(cashCollectedAmountInput || 0);
   const currentCashBalance = previousChangeAmount + reportedAmount;
   const nextChangeAmount = currentCashBalance - cashCollectedAmount;
@@ -57,6 +62,11 @@ export function StaffReportForm({
     Boolean(selectedId) &&
     selectedWorkerIds.length > 0 &&
     reportedAmount > 0 &&
+    (!hasSupporter ||
+      supporterWorkerIds.length > 0 ||
+      (customSupporterName.trim() !== "" &&
+        Number.isInteger(customSupporterAmount) &&
+        customSupporterAmount > 0)) &&
     cashReady &&
     cardReady &&
     !uploading;
@@ -66,6 +76,10 @@ export function StaffReportForm({
     setSelectedWorkerIds(
       bookings.find((booking) => booking.id === selectedId)?.workerIds ?? [],
     );
+    setHasSupporter(false);
+    setSupporterWorkerIds([]);
+    setCustomSupporterName("");
+    setCustomSupporterAmountInput("");
   }, [bookings, selectedId]);
 
   const reconciliationLabel = useMemo(() => {
@@ -91,6 +105,17 @@ export function StaffReportForm({
     if (!Number.isInteger(reportedAmount) || reportedAmount <= 0) {
       event.preventDefault();
       setSubmitMessage("売上金額を1円以上の整数で入力してください。");
+      return;
+    }
+    if (
+      hasSupporter &&
+      supporterWorkerIds.length === 0 &&
+      (customSupporterName.trim() === "" ||
+        !Number.isInteger(customSupporterAmount) ||
+        customSupporterAmount <= 0)
+    ) {
+      event.preventDefault();
+      setSubmitMessage("応援者ありの場合は、作業者を選択するか、その他の名前と金額を入力してください。");
       return;
     }
     if (paymentMethod === "card" && !statementUrl) {
@@ -224,6 +249,87 @@ export function StaffReportForm({
         </div>
         <small className="field-help">管理者の承認後、売上と給与へ反映されます。</small>
       </label>
+
+      <fieldset className="tool-fieldset support-fieldset">
+        <legend>応援者</legend>
+        <div className="segmented-options">
+          <label>
+            <input
+              checked={!hasSupporter}
+              name="has_supporter"
+              onChange={() => setHasSupporter(false)}
+              type="radio"
+              value="false"
+            />
+            <span>なし</span>
+          </label>
+          <label>
+            <input
+              checked={hasSupporter}
+              name="has_supporter"
+              onChange={() => setHasSupporter(true)}
+              type="radio"
+              value="true"
+            />
+            <span>あり</span>
+          </label>
+        </div>
+        {hasSupporter ? (
+          <div className="support-panel">
+            <div className="worker-options">
+              {workers.map((worker) => (
+                <label key={worker.id}>
+                  <input
+                    checked={supporterWorkerIds.includes(worker.id)}
+                    name="support_worker_ids"
+                    onChange={(event) => {
+                      setSupporterWorkerIds((current) =>
+                        event.target.checked
+                          ? [...current, worker.id]
+                          : current.filter((id) => id !== worker.id),
+                      );
+                    }}
+                    type="checkbox"
+                    value={worker.id}
+                  />
+                  <span>
+                    <strong>{worker.name}</strong>
+                    <small>{worker.worker_type === "employee" ? "従業員" : "外注"}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="support-custom-grid">
+              <label>
+                <span>その他の応援者名</span>
+                <input
+                  name="custom_supporter_name"
+                  onChange={(event) => setCustomSupporterName(event.target.value)}
+                  placeholder="例：山田さん"
+                  value={customSupporterName}
+                />
+              </label>
+              <label>
+                <span>その他の金額</span>
+                <div className="currency-input">
+                  <b>¥</b>
+                  <input
+                    min="0"
+                    name="custom_supporter_amount"
+                    onChange={(event) => setCustomSupporterAmountInput(event.target.value)}
+                    placeholder="0"
+                    type="number"
+                    value={customSupporterAmountInput}
+                  />
+                </div>
+              </label>
+            </div>
+            <p className="field-help">
+              その他に入力した金額は固定額の外注費として管理画面へ反映されます。
+            </p>
+          </div>
+        ) : null}
+      </fieldset>
 
       <fieldset className="payment-method-fieldset">
         <legend>支払方法 *</legend>
