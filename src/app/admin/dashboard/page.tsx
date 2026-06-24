@@ -67,6 +67,10 @@ function hasApprovedReport(reservation: ReservationWithRelations) {
   return reservation.work_reports.some((report) => report.approval_status === "approved");
 }
 
+function isApprovedCompleted(reservation: ReservationWithRelations) {
+  return reservation.status === "completed" && hasApprovedReport(reservation);
+}
+
 export default async function AdminDashboard({
   searchParams,
 }: {
@@ -93,12 +97,12 @@ export default async function AdminDashboard({
       reservation.work_reports.length === 0,
   );
   const pendingExpenses = expenses.filter((expense) => expense.status === "requested");
-  const completedCount = reservations.filter(hasApprovedReport).length;
+  const completedCount = reservations.filter(isApprovedCompleted).length;
   const scheduledCount = reservations.filter((item) => item.status === "scheduled").length;
   const categorySales = categories
     .map((category) => {
       const categoryReservations = reservations.filter(
-        (item) => hasApprovedReport(item) && item.service_category_id === category.id,
+        (item) => isApprovedCompleted(item) && item.service_category_id === category.id,
       );
       return {
         id: category.id,
@@ -325,7 +329,7 @@ export default async function AdminDashboard({
                   </td>
                   <td>{workerNames(reservation) || "未設定"}</td>
                   <td><span className={statusClass(reservation.status)}>{reservationLabels[reservation.status]}</span></td>
-                  <td className="numeric">{hasApprovedReport(reservation) ? formatCurrency(Number(reservation.amount)) : "-"}</td>
+                  <td className="numeric">{isApprovedCompleted(reservation) ? formatCurrency(Number(reservation.amount)) : "-"}</td>
                 </tr>
               ))}
               {reservations.length === 0 ? <tr><td colSpan={6}>この月の案件はありません</td></tr> : null}
