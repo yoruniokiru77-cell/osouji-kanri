@@ -14,6 +14,7 @@ type BookingOption = {
   customerName: string | null;
   customerPhone: string | null;
   address: string;
+  categoryName: string | null;
   content: string;
   status: ReservationStatus;
   workerIds: string[];
@@ -44,6 +45,7 @@ function bookingLabel(booking: BookingOption) {
   return [
     reportDateTimeFormatter.format(dateFromSupabase(booking.scheduledAt)),
     booking.customerName || "お客様名未入力",
+    booking.categoryName || "区分未設定",
     booking.content,
   ].join(" - ");
 }

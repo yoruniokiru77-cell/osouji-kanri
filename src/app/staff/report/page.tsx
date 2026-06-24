@@ -45,6 +45,7 @@ export default async function StaffReportPage({
             customerName: booking.customer_name,
             customerPhone: booking.customer_phone,
             address: booking.address,
+            categoryName: booking.service_categories?.name ?? null,
             content: booking.service_content,
             status: booking.status,
             workerIds: booking.reservation_workers.map((assignment) => assignment.worker_id),

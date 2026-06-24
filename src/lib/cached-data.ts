@@ -145,7 +145,7 @@ export async function getCachedStaffReportData(staffId: string) {
       supabase
         .from("reservations")
         .select(
-          "id, scheduled_at, customer_name, customer_phone, address, service_content, status, reservation_staff!inner(staff_id), reservation_workers(worker_id)",
+          "id, scheduled_at, customer_name, customer_phone, address, service_content, service_category_id, status, service_categories(id, name), reservation_staff!inner(staff_id), reservation_workers(worker_id)",
         )
         .eq("reservation_staff.staff_id", staffId)
         .neq("status", "cancelled")
