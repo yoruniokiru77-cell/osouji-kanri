@@ -872,7 +872,13 @@ button:disabled { cursor: wait; opacity: .72; }
 .approval-side small, .approval-side span { color: var(--muted); font-size: 9px; }
 .approval-side > strong { font-size: 20px; }
 .approval-side > span { display: flex; align-items: center; gap: 5px; }
-.approval-actions { display: flex; gap: 7px; margin-top: 7px; }
+.approval-actions {
+  width: 100%;
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+  margin-top: 7px;
+}
 .approval-amount-form {
   width: 100%;
   display: grid;
@@ -930,6 +936,11 @@ button:disabled { cursor: wait; opacity: .72; }
   height: 14px;
   padding: 0;
   accent-color: var(--green);
+}
+.approval-actions > form:not(.approval-amount-form) {
+  width: min(100%, 180px);
+  display: grid;
+  justify-items: end;
 }
 .approval-actions .button, .table-actions .button { min-height: 32px; padding: 0 10px; font-size: 10px; }
 .admin-table-wrap { overflow-x: auto; }
