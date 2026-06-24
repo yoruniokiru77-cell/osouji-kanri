@@ -71,6 +71,22 @@ function isApprovedCompleted(reservation: ReservationWithRelations) {
   return reservation.status === "completed" && hasApprovedReport(reservation);
 }
 
+function isOtaWorkerName(name?: string) {
+  return Boolean(name?.includes("太田"));
+}
+
+function otaSalesShare(reservation: ReservationWithRelations) {
+  const normalWorkers = reservation.reservation_workers.filter(
+    (assignment) => !assignment.is_supporter && assignment.workers,
+  );
+  if (normalWorkers.length === 0) return 0;
+
+  const includesOta = normalWorkers.some((assignment) => isOtaWorkerName(assignment.workers?.name));
+  if (!includesOta) return 0;
+
+  return Math.floor(Number(reservation.amount) / normalWorkers.length);
+}
+
 export default async function AdminDashboard({
   searchParams,
 }: {
@@ -113,6 +129,7 @@ export default async function AdminDashboard({
         id: category.id,
         name: category.name,
         count: categoryReservations.length,
+        otaSales: categoryReservations.reduce((sum, item) => sum + otaSalesShare(item), 0),
         sales: categoryReservations.reduce((sum, item) => sum + Number(item.amount), 0),
       };
     })
@@ -385,7 +402,7 @@ export default async function AdminDashboard({
               <article key={item.id}>
                 <span>{item.name}</span>
                 <strong>{formatCurrency(item.sales)}</strong>
-                <small>{item.count}件</small>
+                <small>{item.count}件 / 太田売上 {formatCurrency(item.otaSales)}</small>
               </article>
             ))}
           </div>
