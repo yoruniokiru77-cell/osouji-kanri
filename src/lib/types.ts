@@ -83,6 +83,7 @@ export type ReservationWithRelations = Reservation & {
     worker_id: string;
     compensation_type: CompensationType | null;
     compensation_value: number | null;
+    is_supporter: boolean;
     workers: Worker | null;
   }[];
   reservation_service_contents?: ReservationServiceContent[];

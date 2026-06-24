@@ -567,7 +567,10 @@ export async function upsertWorkReport(formData: FormData) {
     readString(formData, "has_supporter") === "true"
       ? formData.getAll("support_worker_ids").map(String).filter(Boolean)
       : [];
-  const workerIds = [...new Set([...baseWorkerIds, ...supportWorkerIds])];
+  const workerIds = [...new Set(baseWorkerIds)];
+  const normalizedSupportWorkerIds = [
+    ...new Set(supportWorkerIds.filter((workerId) => !workerIds.includes(workerId))),
+  ];
   const customSupporters = readCustomSupporters(formData);
 
   if (workerIds.length === 0) {
@@ -575,7 +578,7 @@ export async function upsertWorkReport(formData: FormData) {
   }
   if (
     readString(formData, "has_supporter") === "true" &&
-    supportWorkerIds.length === 0 &&
+    normalizedSupportWorkerIds.length === 0 &&
     customSupporters.length === 0
   ) {
     throw new Error("応援者ありの場合は、作業者を選択するか、その他の名前と金額を入力してください");
@@ -622,6 +625,7 @@ export async function upsertWorkReport(formData: FormData) {
   const { error: workerError } = await supabase.rpc("replace_own_reservation_workers", {
     target_custom_supporters: customSupporters,
     target_reservation_id: reservationId,
+    target_support_worker_ids: normalizedSupportWorkerIds,
     target_worker_ids: workerIds,
   });
 
