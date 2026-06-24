@@ -66,6 +66,10 @@ function isDateKey(value?: string) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
 
+function earlierDateKey(a: string, b: string) {
+  return a < b ? a : b;
+}
+
 function createWeekCalendar(
   startDateKey: string,
   bookings: ReservationWithRelations[],
@@ -136,8 +140,9 @@ export default async function StaffDashboard({
   const now = new Date();
   const todayKey = dateKeyFormatter.format(now);
   const selectedDate = isDateKey(query.date) ? query.date! : todayKey;
-  const reservationWindowStart = startOfDayJst(selectedDate);
-  const reservationWindowEnd = startOfDayJst(shiftDate(selectedDate, 90));
+  const calendarStartDate = earlierDateKey(selectedDate, todayKey);
+  const reservationWindowStart = startOfDayJst(calendarStartDate);
+  const reservationWindowEnd = startOfDayJst(shiftDate(calendarStartDate, 90));
   const { reservations, expenses } = await getCachedStaffDashboardData(
     profile.id,
     reservationWindowStart.toISOString(),
@@ -149,9 +154,9 @@ export default async function StaffDashboard({
     (item) => reservationDateKey(item.scheduled_at) === selectedDate,
   );
   const upcoming = reservations.filter(
-    (item) => reservationDateKey(item.scheduled_at) > selectedDate,
+    (item) => reservationDateKey(item.scheduled_at) !== selectedDate,
   );
-  const upcomingWeeks = createWeekCalendar(selectedDate, upcoming, reservationDateKey);
+  const upcomingWeeks = createWeekCalendar(calendarStartDate, upcoming, reservationDateKey);
   const pendingCount = expenses.filter((item) => item.status === "requested").length;
   const selectedDateLabel = new Intl.DateTimeFormat("ja-JP", {
     month: "long",
@@ -329,7 +334,7 @@ export default async function StaffDashboard({
         {upcoming.length > 0 ? (
           <section className="page-section fade-up delay-3">
             <div className="section-heading">
-              <h2>選択日より後の予定</h2>
+              <h2>予定カレンダー</h2>
               <span>{upcoming.length}件</span>
             </div>
             <WeeklyScheduleCalendar weeks={upcomingWeeks} />
