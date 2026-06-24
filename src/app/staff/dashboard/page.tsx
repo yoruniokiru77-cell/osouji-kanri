@@ -133,7 +133,7 @@ function formatWeekDay(dateKey: string) {
 export default async function StaffDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ created?: string; date?: string; updated?: string }>;
+  searchParams: Promise<{ created?: string; date?: string; deleted?: string; updated?: string }>;
 }) {
   const profile = await requireRole("staff");
   const query = await searchParams;
@@ -147,7 +147,7 @@ export default async function StaffDashboard({
     profile.id,
     reservationWindowStart.toISOString(),
     reservationWindowEnd.toISOString(),
-    query.created || query.updated || "",
+    query.created || query.deleted || query.updated || "",
   );
   const reservationDateKey = (value: string) => dateKeyFormatter.format(new Date(value));
   const selectedBookings = reservations.filter(
@@ -175,6 +175,7 @@ export default async function StaffDashboard({
 
         <section className="page-section fade-up delay-1">
           {query.created ? <div className="success-banner">予定を登録しました</div> : null}
+          {query.deleted === "1" ? <div className="success-banner">予定を削除しました</div> : null}
           {query.updated === "1" ? <div className="success-banner">予定を変更しました</div> : null}
           <div className="section-heading">
             <h2>{selectedHeading}</h2>

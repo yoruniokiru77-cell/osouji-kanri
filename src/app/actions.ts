@@ -397,6 +397,26 @@ export async function updateStaffReservation(formData: FormData) {
   redirect(`/staff/dashboard?date=${selectedDate}&updated=1`);
 }
 
+export async function cancelStaffReservation(formData: FormData) {
+  await requireRole("staff");
+  const supabase = await createClient();
+  const reservationId = readString(formData, "reservation_id");
+  const scheduledDate = readString(formData, "scheduled_date");
+
+  const { error } = await supabase.rpc("cancel_own_scheduled_reservation", {
+    target_reservation_id: reservationId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidateStaffData();
+  revalidateAdminData();
+  revalidatePath(`/staff/schedule/${reservationId}`);
+  redirect(`/staff/dashboard?date=${scheduledDate}&deleted=1`);
+}
+
 export async function saveWorker(formData: FormData) {
   await requireRole("admin");
   const supabase = await createClient();

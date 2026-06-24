@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import { notFound } from "next/navigation";
 import { updateStaffReservation } from "@/app/actions";
+import { DeleteReservationForm } from "@/components/DeleteReservationForm";
 import { ReservationWorkItemsFieldset } from "@/components/ReservationWorkItemsFieldset";
 import { StaffLayout } from "@/components/StaffLayout";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -76,107 +77,113 @@ export default async function StaffScheduleEditPage({
             <p>完了済み、作業中、キャンセル済みの予定は変更できません。</p>
           </div>
         ) : (
-          <form action={updateStaffReservation} className="staff-form">
-            <input name="reservation_id" type="hidden" value={reservation.id} />
-            <label>
-              <span>日時 *</span>
-              <input
-                defaultValue={toDateTimeLocal(reservation.scheduled_at)}
-                name="scheduled_at"
-                required
-                type="datetime-local"
+          <>
+            <form action={updateStaffReservation} className="staff-form">
+              <input name="reservation_id" type="hidden" value={reservation.id} />
+              <label>
+                <span>日時 *</span>
+                <input
+                  defaultValue={toDateTimeLocal(reservation.scheduled_at)}
+                  name="scheduled_at"
+                  required
+                  type="datetime-local"
+                />
+              </label>
+              <label>
+                <span>お客様名</span>
+                <input defaultValue={reservation.customer_name ?? ""} name="customer_name" placeholder="例：山田様" />
+              </label>
+              <label>
+                <span>電話番号</span>
+                <input
+                  defaultValue={reservation.customer_phone ?? ""}
+                  inputMode="tel"
+                  name="customer_phone"
+                  placeholder="例：090-1234-5678"
+                  type="tel"
+                />
+              </label>
+              <label>
+                <span>住所 *</span>
+                <input defaultValue={reservation.address} name="address" required />
+              </label>
+              <label>
+                <span>区分 *</span>
+                <select
+                  defaultValue={reservation.service_category_id ?? ""}
+                  name="service_category_id"
+                  required
+                >
+                  <option disabled value="">区分を選択</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+              </label>
+              <ReservationWorkItemsFieldset
+                contents={contents}
+                initialCustomToolNames={initialCustomToolNames}
+                initialManualToolIds={initialToolIds}
+                initialWorkItems={initialWorkItems}
+                serviceContentTools={serviceContentTools}
+                tools={tools}
               />
-            </label>
-            <label>
-              <span>お客様名</span>
-              <input defaultValue={reservation.customer_name ?? ""} name="customer_name" placeholder="例：山田様" />
-            </label>
-            <label>
-              <span>電話番号</span>
-              <input
-                defaultValue={reservation.customer_phone ?? ""}
-                inputMode="tel"
-                name="customer_phone"
-                placeholder="例：090-1234-5678"
-                type="tel"
-              />
-            </label>
-            <label>
-              <span>住所 *</span>
-              <input defaultValue={reservation.address} name="address" required />
-            </label>
-            <label>
-              <span>区分 *</span>
-              <select
-                defaultValue={reservation.service_category_id ?? ""}
-                name="service_category_id"
-                required
-              >
-                <option disabled value="">区分を選択</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>{category.name}</option>
-                ))}
-              </select>
-            </label>
-            <ReservationWorkItemsFieldset
-              contents={contents}
-              initialCustomToolNames={initialCustomToolNames}
-              initialManualToolIds={initialToolIds}
-              initialWorkItems={initialWorkItems}
-              serviceContentTools={serviceContentTools}
-              tools={tools}
+              <fieldset className="tool-fieldset">
+                <legend>作業担当者 *（複数選択可）</legend>
+                <div className="worker-options">
+                  {workers.map((worker) => (
+                    <label key={worker.id}>
+                      <input
+                        defaultChecked={selectedWorkerIds.has(worker.id)}
+                        name="worker_ids"
+                        type="checkbox"
+                        value={worker.id}
+                      />
+                      <span>
+                        <strong>{worker.name}</strong>
+                        <small>{worker.worker_type === "employee" ? "従業員" : "外注"}</small>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {workers.length === 0 ? (
+                  <p className="field-help">作業者マスタが未登録です。</p>
+                ) : null}
+              </fieldset>
+              <label>
+                <span>駐車場 *</span>
+                <select
+                  defaultValue={reservation.parking_available ? "true" : "false"}
+                  name="parking_available"
+                  required
+                >
+                  <option value="true">あり</option>
+                  <option value="false">なし</option>
+                </select>
+              </label>
+              <label>
+                <span>駐車場メモ</span>
+                <textarea
+                  defaultValue={reservation.parking_notes ?? ""}
+                  name="parking_notes"
+                  placeholder="駐車位置や近隣の駐車場所"
+                  rows={3}
+                />
+              </label>
+              <label>
+                <span>備考</span>
+                <textarea defaultValue={reservation.notes ?? ""} name="notes" rows={5} />
+              </label>
+              <SubmitButton className="primary-button green-button" pendingLabel="変更を保存中...">
+                <Save size={17} />
+                変更を保存
+              </SubmitButton>
+            </form>
+            <DeleteReservationForm
+              reservationId={reservation.id}
+              scheduledDate={reservation.scheduled_at.slice(0, 10)}
             />
-            <fieldset className="tool-fieldset">
-              <legend>作業担当者 *（複数選択可）</legend>
-              <div className="worker-options">
-                {workers.map((worker) => (
-                  <label key={worker.id}>
-                    <input
-                      defaultChecked={selectedWorkerIds.has(worker.id)}
-                      name="worker_ids"
-                      type="checkbox"
-                      value={worker.id}
-                    />
-                    <span>
-                      <strong>{worker.name}</strong>
-                      <small>{worker.worker_type === "employee" ? "従業員" : "外注"}</small>
-                    </span>
-                  </label>
-                ))}
-              </div>
-              {workers.length === 0 ? (
-                <p className="field-help">作業者マスタが未登録です。</p>
-              ) : null}
-            </fieldset>
-            <label>
-              <span>駐車場 *</span>
-              <select
-                defaultValue={reservation.parking_available ? "true" : "false"}
-                name="parking_available"
-                required
-              >
-                <option value="true">あり</option>
-                <option value="false">なし</option>
-              </select>
-            </label>
-            <label>
-              <span>駐車場メモ</span>
-              <textarea
-                defaultValue={reservation.parking_notes ?? ""}
-                name="parking_notes"
-                placeholder="駐車位置や近隣の駐車場所"
-                rows={3}
-              />
-            </label>
-            <label>
-              <span>備考</span>
-              <textarea defaultValue={reservation.notes ?? ""} name="notes" rows={5} />
-            </label>
-            <SubmitButton className="primary-button green-button" pendingLabel="変更を保存中...">
-              <Save size={17} />
-              変更を保存
-            </SubmitButton>
-          </form>
+          </>
         )}
       </div>
     </StaffLayout>

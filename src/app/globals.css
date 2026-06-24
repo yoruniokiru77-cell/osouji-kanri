@@ -619,6 +619,8 @@ button:disabled { cursor: wait; opacity: .72; }
 .green-button { background: #238d6c; }
 .amber-button { color: #201b12; background: var(--amber); }
 .secondary-button { color: var(--text); background: transparent; border: 1px solid var(--line); }
+.danger-button { color: #ffb4b8; border-color: rgba(230,93,99,.42); background: rgba(230,93,99,.08); }
+.danger-zone { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(230,93,99,.24); }
 .booking-preview { display: grid; gap: 9px; padding: 12px; }
 .booking-preview div, .booking-preview p { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 11px; }
 .booking-preview div .status { margin-left: auto; }
