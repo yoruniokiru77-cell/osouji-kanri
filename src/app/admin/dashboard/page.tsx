@@ -63,6 +63,10 @@ function paymentLabel(method: string) {
   return { cash: "現金", card: "カード", invoice: "請求書", other: "その他" }[method] ?? method;
 }
 
+function hasApprovedReport(reservation: ReservationWithRelations) {
+  return reservation.work_reports.some((report) => report.approval_status === "approved");
+}
+
 export default async function AdminDashboard({
   searchParams,
 }: {
@@ -82,13 +86,19 @@ export default async function AdminDashboard({
       .filter((report) => report.approval_status === "pending")
       .map((report) => ({ reservation, report })),
   );
+  const unreportedReservations = reservations.filter(
+    (reservation) =>
+      reservation.status === "scheduled" &&
+      new Date(reservation.scheduled_at) < new Date() &&
+      reservation.work_reports.length === 0,
+  );
   const pendingExpenses = expenses.filter((expense) => expense.status === "requested");
-  const completedCount = reservations.filter((item) => item.status === "completed").length;
+  const completedCount = reservations.filter(hasApprovedReport).length;
   const scheduledCount = reservations.filter((item) => item.status === "scheduled").length;
   const categorySales = categories
     .map((category) => {
       const categoryReservations = reservations.filter(
-        (item) => item.status === "completed" && item.service_category_id === category.id,
+        (item) => hasApprovedReport(item) && item.service_category_id === category.id,
       );
       return {
         id: category.id,
@@ -144,6 +154,11 @@ export default async function AdminDashboard({
             <strong>{pendingReports.length}件</strong>
           </div>
           <div>
+            <AlertTriangle size={18} />
+            <span>未報告案件</span>
+            <strong>{unreportedReservations.length}件</strong>
+          </div>
+          <div>
             <ReceiptText size={18} />
             <span>経費承認待ち</span>
             <strong>{pendingExpenses.length}件</strong>
@@ -154,6 +169,35 @@ export default async function AdminDashboard({
             <strong>{scheduledCount}件</strong>
           </div>
         </div>
+      </section>
+
+      <section className="admin-section" id="unreported">
+        <div className="admin-section-heading">
+          <div><AlertTriangle size={19} /><span><h2>未報告案件</h2><p>作業日を過ぎても実績報告がない案件</p></span></div>
+          <strong>{unreportedReservations.length}件</strong>
+        </div>
+        {unreportedReservations.length === 0 ? (
+          <div className="admin-empty">
+            <CheckCircle2 size={25} />
+            <p>未報告の案件はありません</p>
+          </div>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead><tr><th>日付</th><th>案件名</th><th>作業者</th><th>住所</th></tr></thead>
+              <tbody>
+                {unreportedReservations.map((reservation) => (
+                  <tr key={reservation.id}>
+                    <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
+                    <td><strong>{reservation.service_content}</strong></td>
+                    <td>{workerNames(reservation) || "未設定"}</td>
+                    <td>{reservation.address}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="admin-section" id="approvals">
@@ -281,7 +325,7 @@ export default async function AdminDashboard({
                   </td>
                   <td>{workerNames(reservation) || "未設定"}</td>
                   <td><span className={statusClass(reservation.status)}>{reservationLabels[reservation.status]}</span></td>
-                  <td className="numeric">{reservation.status === "completed" ? formatCurrency(Number(reservation.amount)) : "-"}</td>
+                  <td className="numeric">{hasApprovedReport(reservation) ? formatCurrency(Number(reservation.amount)) : "-"}</td>
                 </tr>
               ))}
               {reservations.length === 0 ? <tr><td colSpan={6}>この月の案件はありません</td></tr> : null}

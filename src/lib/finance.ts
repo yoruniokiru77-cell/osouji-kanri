@@ -1,5 +1,13 @@
 import type { Expense, ReservationWithRelations } from "@/lib/types";
 
+function hasApprovedReport(reservation: ReservationWithRelations) {
+  return reservation.work_reports?.some((report) => report.approval_status === "approved") ?? false;
+}
+
+function approvedReservations(reservations: ReservationWithRelations[]) {
+  return reservations.filter((item) => item.status === "completed" && hasApprovedReport(item));
+}
+
 function assignmentAmount(
   reservation: ReservationWithRelations,
   assignment: ReservationWithRelations["reservation_workers"][number],
@@ -46,7 +54,7 @@ function supporterFixedCost(reservation: ReservationWithRelations) {
 export function calculatePayroll(reservations: ReservationWithRelations[]) {
   const payroll = new Map<string, { staffName: string; amount: number }>();
 
-  for (const reservation of reservations.filter((item) => item.status === "completed")) {
+  for (const reservation of approvedReservations(reservations)) {
     const assignments = reservation.reservation_workers?.filter((item) => item.workers) ?? [];
     const normalAssignments = assignments.filter((item) => !item.is_supporter);
     if (normalAssignments.length === 0) continue;
@@ -75,7 +83,7 @@ export function calculatePayroll(reservations: ReservationWithRelations[]) {
 export function calculateContractorCosts(reservations: ReservationWithRelations[]) {
   const costs = new Map<string, { workerName: string; amount: number }>();
 
-  for (const reservation of reservations.filter((item) => item.status === "completed")) {
+  for (const reservation of approvedReservations(reservations)) {
     const assignments = reservation.reservation_workers?.filter((item) => item.workers) ?? [];
     const normalAssignments = assignments.filter((item) => !item.is_supporter);
     const calculationBase = Math.max(0, Number(reservation.amount) - supporterFixedCost(reservation));
@@ -99,11 +107,11 @@ export function calculateSummary(
   reservations: ReservationWithRelations[],
   expenses: Expense[],
 ) {
-  const completedReservations = reservations.filter((item) => item.status === "completed");
+  const completedReservations = approvedReservations(reservations);
   const totalSales = completedReservations.reduce((sum, item) => sum + Number(item.amount), 0);
-  const payroll = calculatePayroll(completedReservations);
+  const payroll = calculatePayroll(reservations);
   const totalPayroll = payroll.reduce((sum, item) => sum + item.amount, 0);
-  const contractorCosts = calculateContractorCosts(completedReservations);
+  const contractorCosts = calculateContractorCosts(reservations);
   const totalContractorCosts = contractorCosts.reduce((sum, item) => sum + item.amount, 0);
   const purchasedExpenses = expenses
     .filter((expense) => expense.status === "purchased")
