@@ -14,6 +14,12 @@ function readNumber(formData: FormData, key: string) {
   return Number(readString(formData, key));
 }
 
+function asJstTimestamp(value: string) {
+  if (!value) return value;
+  if (/[zZ]|[+-]\d{2}:\d{2}$/.test(value)) return value;
+  return `${value.length === 16 ? `${value}:00` : value}+09:00`;
+}
+
 type ServiceItemInput = {
   custom_name: string | null;
   service_content_id: string | null;
@@ -274,7 +280,7 @@ export async function createStaffReservation(formData: FormData) {
     .from("reservations")
     .insert({
       id: reservationId,
-      scheduled_at: readString(formData, "scheduled_at"),
+      scheduled_at: asJstTimestamp(readString(formData, "scheduled_at")),
       customer_name: readString(formData, "customer_name") || null,
       customer_phone: readString(formData, "customer_phone") || null,
       address: readString(formData, "address"),
@@ -384,7 +390,7 @@ export async function updateStaffReservation(formData: FormData) {
     target_parking_available: readString(formData, "parking_available") === "true",
     target_parking_notes: readString(formData, "parking_notes") || null,
     target_reservation_id: reservationId,
-    target_scheduled_at: `${scheduledAt}:00+09:00`,
+    target_scheduled_at: asJstTimestamp(scheduledAt),
     target_service_category_id: readString(formData, "service_category_id"),
     target_service_items: serviceItems,
     target_custom_tool_names: customToolNames,

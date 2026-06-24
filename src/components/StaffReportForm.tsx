@@ -19,6 +19,35 @@ type BookingOption = {
   workerIds: string[];
 };
 
+const reportDateTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
+  month: "numeric",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Asia/Tokyo",
+});
+
+const reportPreviewDateTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Asia/Tokyo",
+});
+
+function dateFromSupabase(value: string) {
+  return new Date(/[zZ]|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`);
+}
+
+function bookingLabel(booking: BookingOption) {
+  return [
+    reportDateTimeFormatter.format(dateFromSupabase(booking.scheduledAt)),
+    booking.customerName || "お客様名未入力",
+    booking.content,
+  ].join(" - ");
+}
+
 export function StaffReportForm({
   bookings,
   initialBookingId = "",
@@ -178,14 +207,7 @@ export function StaffReportForm({
           <option value="">案件を選択してください</option>
           {bookings.map((booking) => (
             <option key={booking.id} value={booking.id}>
-              {new Date(booking.scheduledAt).toLocaleString("ja-JP", {
-                month: "numeric",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZone: "Asia/Tokyo",
-              })}{" "}
-              - {booking.content}
+              {bookingLabel(booking)}
             </option>
           ))}
         </select>
@@ -195,7 +217,7 @@ export function StaffReportForm({
         <div className="glass-card booking-preview">
           <div>
             <Clock3 size={15} />
-            <strong>{new Date(selected.scheduledAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}</strong>
+            <strong>{reportPreviewDateTimeFormatter.format(dateFromSupabase(selected.scheduledAt))}</strong>
             <span className={statusClass(selected.status)}>{reservationLabels[selected.status]}</span>
           </div>
           <p><MapPin size={15} />{selected.address}</p>
