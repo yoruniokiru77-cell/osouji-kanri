@@ -33,6 +33,10 @@ export async function requireRole(role: Role) {
   }
 
   if (profile.role !== role) {
+    if (role === "staff" && process.env.SINGLE_USER_MODE === "true") {
+      redirect("/auth/auto");
+    }
+
     redirect(role === "admin" ? "/admin/login?switch=1" : "/admin/dashboard");
   }
 

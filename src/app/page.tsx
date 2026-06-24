@@ -20,5 +20,13 @@ export default async function Home() {
     redirect("/login");
   }
 
-  redirect(profile.role === "admin" ? "/admin/dashboard" : "/staff/dashboard");
+  if (adminHost) {
+    redirect(profile.role === "admin" ? "/admin/dashboard" : "/admin/login?switch=1");
+  }
+
+  if (profile.role === "admin" && process.env.SINGLE_USER_MODE === "true") {
+    redirect("/auth/auto");
+  }
+
+  redirect("/staff/dashboard");
 }
