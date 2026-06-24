@@ -183,6 +183,7 @@ export function StaffReportForm({
                 day: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
+                timeZone: "Asia/Tokyo",
               })}{" "}
               - {booking.content}
             </option>
@@ -194,7 +195,7 @@ export function StaffReportForm({
         <div className="glass-card booking-preview">
           <div>
             <Clock3 size={15} />
-            <strong>{new Date(selected.scheduledAt).toLocaleString("ja-JP")}</strong>
+            <strong>{new Date(selected.scheduledAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}</strong>
             <span className={statusClass(selected.status)}>{reservationLabels[selected.status]}</span>
           </div>
           <p><MapPin size={15} />{selected.address}</p>

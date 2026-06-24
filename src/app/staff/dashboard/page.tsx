@@ -227,6 +227,7 @@ export default async function StaffDashboard({
                       {new Date(booking.scheduled_at).toLocaleTimeString("ja-JP", {
                         hour: "2-digit",
                         minute: "2-digit",
+                        timeZone: "Asia/Tokyo",
                       })}
                     </strong>
                     <div className="booking-actions">
