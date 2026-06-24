@@ -703,10 +703,61 @@ export async function reviewWorkReport(formData: FormData) {
   await requireRole("admin");
   const supabase = await createClient();
   const decision = readString(formData, "decision");
+  const reportId = readString(formData, "report_id");
 
   if (decision === "approved") {
+    const approvedAmount = readNumber(formData, "approved_amount");
+    const reservationId = readString(formData, "reservation_id");
+    const workerIds = [...new Set(formData.getAll("admin_worker_ids").map(String).filter(Boolean))];
+    if (!Number.isInteger(approvedAmount) || approvedAmount <= 0) {
+      throw new Error("承認する売上金額は1円以上の整数で入力してください");
+    }
+    if (!reservationId || workerIds.length === 0) {
+      throw new Error("承認する作業者を1人以上選択してください");
+    }
+
+    const { count: validWorkerCount, error: validWorkerError } = await supabase
+      .from("workers")
+      .select("id", { count: "exact", head: true })
+      .in("id", workerIds)
+      .eq("active", true);
+    if (validWorkerError) throw new Error(validWorkerError.message);
+    if ((validWorkerCount ?? 0) !== workerIds.length) {
+      throw new Error("選択された作業者を確認してください");
+    }
+
+    const { error: clearNormalWorkerError } = await supabase
+      .from("reservation_workers")
+      .delete()
+      .eq("reservation_id", reservationId)
+      .eq("is_supporter", false);
+    if (clearNormalWorkerError) throw new Error(clearNormalWorkerError.message);
+
+    const { error: clearSelectedSupporterError } = await supabase
+      .from("reservation_workers")
+      .delete()
+      .eq("reservation_id", reservationId)
+      .in("worker_id", workerIds);
+    if (clearSelectedSupporterError) throw new Error(clearSelectedSupporterError.message);
+
+    const { error: workerError } = await supabase.from("reservation_workers").insert(
+      workerIds.map((workerId) => ({
+        reservation_id: reservationId,
+        worker_id: workerId,
+        is_supporter: false,
+      })),
+    );
+    if (workerError) throw new Error(workerError.message);
+
+    const { error: amountError } = await supabase
+      .from("work_reports")
+      .update({ reported_amount: approvedAmount })
+      .eq("id", reportId)
+      .eq("approval_status", "pending");
+    if (amountError) throw new Error(amountError.message);
+
     const { error } = await supabase.rpc("approve_work_report", {
-      report_id: readString(formData, "report_id"),
+      report_id: reportId,
     });
     if (error) throw new Error(error.message);
   } else {
@@ -716,7 +767,7 @@ export async function reviewWorkReport(formData: FormData) {
         approval_status: "rejected",
         reviewed_at: new Date().toISOString(),
       })
-      .eq("id", readString(formData, "report_id"));
+      .eq("id", reportId);
     if (error) throw new Error(error.message);
   }
 

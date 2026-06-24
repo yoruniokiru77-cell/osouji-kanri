@@ -261,13 +261,44 @@ export default async function AdminDashboard({
                   </div>
                 </div>
                 <div className="approval-side">
-                  <small>報告売上</small>
-                  <strong>{formatCurrency(Number(report.reported_amount))}</strong>
                   <span><Users size={13} />{workerNames(reservation) || "担当未設定"}</span>
                   <div className="approval-actions">
-                    <form action={reviewWorkReport}>
+                    <form action={reviewWorkReport} className="approval-amount-form">
                       <input name="report_id" type="hidden" value={report.id} />
+                      <input name="reservation_id" type="hidden" value={reservation.id} />
                       <input name="decision" type="hidden" value="approved" />
+                      <label>
+                        <small>承認売上</small>
+                        <span className="currency-input">
+                          <b>¥</b>
+                          <input
+                            defaultValue={Number(report.reported_amount)}
+                            min="1"
+                            name="approved_amount"
+                            required
+                            type="number"
+                          />
+                        </span>
+                      </label>
+                      <fieldset>
+                        <legend>作業者</legend>
+                        <div className="approval-worker-options">
+                          {workers.filter((worker) => worker.active).map((worker) => (
+                            <label key={worker.id}>
+                              <input
+                                defaultChecked={reservation.reservation_workers.some(
+                                  (assignment) =>
+                                    assignment.worker_id === worker.id && !assignment.is_supporter,
+                                )}
+                                name="admin_worker_ids"
+                                type="checkbox"
+                                value={worker.id}
+                              />
+                              <span>{worker.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
                       <button className="button" type="submit">承認する</button>
                     </form>
                     <form action={reviewWorkReport}>

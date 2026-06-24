@@ -872,6 +872,57 @@ button:disabled { cursor: wait; opacity: .72; }
 .approval-side > strong { font-size: 20px; }
 .approval-side > span { display: flex; align-items: center; gap: 5px; }
 .approval-actions { display: flex; gap: 7px; margin-top: 7px; }
+.approval-amount-form {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+.approval-amount-form label {
+  width: 150px;
+  display: grid;
+  gap: 4px;
+}
+.approval-amount-form fieldset {
+  width: 180px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.approval-amount-form legend {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+.approval-amount-form input {
+  min-height: 34px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: right;
+}
+.approval-worker-options {
+  display: grid;
+  gap: 5px;
+}
+.approval-worker-options label {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+}
+.approval-worker-options input {
+  min-height: 0;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  accent-color: var(--green);
+}
 .approval-actions .button, .table-actions .button { min-height: 32px; padding: 0 10px; font-size: 10px; }
 .admin-table-wrap { overflow-x: auto; }
 .admin-table { min-width: 760px; }
