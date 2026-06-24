@@ -50,6 +50,10 @@ function dateFromKey(dateKey: string) {
   return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 }
 
+function startOfDayJst(dateKey: string) {
+  return new Date(`${dateKey}T00:00:00+09:00`);
+}
+
 function startOfWeekMonday(dateKey: string) {
   const date = dateFromKey(dateKey);
   const day = date.getUTCDay();
@@ -132,9 +136,8 @@ export default async function StaffDashboard({
   const now = new Date();
   const todayKey = dateKeyFormatter.format(now);
   const selectedDate = isDateKey(query.date) ? query.date! : todayKey;
-  const reservationWindowStart = dateFromKey(selectedDate);
-  const reservationWindowEnd = new Date(reservationWindowStart);
-  reservationWindowEnd.setUTCDate(reservationWindowEnd.getUTCDate() + 90);
+  const reservationWindowStart = startOfDayJst(selectedDate);
+  const reservationWindowEnd = startOfDayJst(shiftDate(selectedDate, 90));
   const { reservations, expenses } = await getCachedStaffDashboardData(
     profile.id,
     reservationWindowStart.toISOString(),
