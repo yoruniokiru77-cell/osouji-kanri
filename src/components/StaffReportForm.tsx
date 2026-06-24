@@ -40,6 +40,7 @@ export function StaffReportForm({
   const [customSupporterAmountInput, setCustomSupporterAmountInput] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [reportedAmountInput, setReportedAmountInput] = useState("");
+  const [currentCashBalanceInput, setCurrentCashBalanceInput] = useState("");
   const [cashCollectedAmountInput, setCashCollectedAmountInput] = useState("");
   const [statementUrl, setStatementUrl] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -48,12 +49,14 @@ export function StaffReportForm({
   const selected = bookings.find((booking) => booking.id === selectedId);
   const reportedAmount = Number(reportedAmountInput || 0);
   const customSupporterAmount = Number(customSupporterAmountInput || 0);
+  const currentCashBalance = Number(currentCashBalanceInput || 0);
   const cashCollectedAmount = Number(cashCollectedAmountInput || 0);
-  const currentCashBalance = previousChangeAmount + reportedAmount;
   const nextChangeAmount = currentCashBalance - cashCollectedAmount;
   const cashReady =
     paymentMethod !== "cash" ||
     (reportedAmount > 0 &&
+      currentCashBalanceInput !== "" &&
+      currentCashBalance >= 0 &&
       cashCollectedAmountInput !== "" &&
       cashCollectedAmount >= 0 &&
       nextChangeAmount >= 0);
@@ -84,10 +87,11 @@ export function StaffReportForm({
 
   const reconciliationLabel = useMemo(() => {
     if (reportedAmount <= 0) return "売上金額を入力してください";
+    if (currentCashBalanceInput === "") return "現在の残高を入力してください";
     if (cashCollectedAmountInput === "") return "管理者へ渡す金額を入力してください";
     if (nextChangeAmount < 0) return "管理者へ渡す金額が現在の残高を超えています";
     return `次回繰越は ${new Intl.NumberFormat("ja-JP").format(nextChangeAmount)}円です`;
-  }, [cashCollectedAmountInput, nextChangeAmount, reportedAmount]);
+  }, [cashCollectedAmountInput, currentCashBalanceInput, nextChangeAmount, reportedAmount]);
 
   function validateBeforeSubmit(event: React.FormEvent<HTMLFormElement>) {
     setSubmitMessage("");
@@ -376,13 +380,17 @@ export function StaffReportForm({
             </div>
           </label>
           <label>
-            <span>現在の残高（自動計算）</span>
+            <span>現在の残高（手入力）*</span>
             <div className="currency-input">
               <b>¥</b>
               <input
-                readOnly
+                min="0"
+                name="current_cash_balance"
+                onChange={(event) => setCurrentCashBalanceInput(event.target.value)}
+                placeholder="0"
+                required={paymentMethod === "cash"}
                 type="number"
-                value={currentCashBalance}
+                value={currentCashBalanceInput}
               />
             </div>
           </label>
@@ -402,7 +410,7 @@ export function StaffReportForm({
           </label>
           <input name="change_amount" type="hidden" value={Math.max(nextChangeAmount, 0)} />
           <div className={cashReady && reportedAmount > 0 ? "reconciliation-ok" : "reconciliation-error"}>
-            <span>売上金額 + 前回の釣銭 = 現在の残高</span>
+            <span>現在の残高（手入力）</span>
             <strong>{new Intl.NumberFormat("ja-JP").format(currentCashBalance)}円</strong>
             <span>現在の残高 - 管理者へ渡す金額 = 次回繰越</span>
             <strong>{new Intl.NumberFormat("ja-JP").format(Math.max(nextChangeAmount, 0))}円</strong>

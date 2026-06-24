@@ -195,6 +195,7 @@ export default async function AdminDashboard({
                     {report.payment_method === "cash" ? (
                       <span>
                         前回釣銭 {formatCurrency(Number(report.previous_change_amount))} /
+                        現在残高 {formatCurrency(Number(report.current_cash_balance))} /
                         今回釣銭 {formatCurrency(Number(report.change_amount))} /
                         管理者へ渡す {formatCurrency(Number(report.cash_collected_amount))}
                       </span>

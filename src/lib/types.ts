@@ -103,6 +103,7 @@ export type WorkReport = {
   payment_method: "cash" | "card" | "invoice" | "other";
   card_statement_url: string | null;
   previous_change_amount: number | null;
+  current_cash_balance: number | null;
   change_amount: number | null;
   cash_collected_amount: number | null;
   approval_status: "pending" | "approved" | "rejected";

@@ -580,6 +580,7 @@ export async function upsertWorkReport(formData: FormData) {
   const paymentMethod = readString(formData, "payment_method");
   const cardStatementUrl = readString(formData, "card_statement_url") || null;
   const previousChangeAmount = readNumber(formData, "previous_change_amount");
+  const currentCashBalance = readNumber(formData, "current_cash_balance");
   const cashCollectedAmount = readNumber(formData, "cash_collected_amount");
   let changeAmount = readNumber(formData, "change_amount");
 
@@ -588,11 +589,10 @@ export async function upsertWorkReport(formData: FormData) {
   }
 
   if (paymentMethod === "cash") {
-    const values = [previousChangeAmount, cashCollectedAmount];
+    const values = [previousChangeAmount, currentCashBalance, cashCollectedAmount];
     if (values.some((value) => !Number.isInteger(value) || value < 0)) {
-      throw new Error("釣銭と管理者へ渡す金額を0円以上の整数で入力してください");
+      throw new Error("釣銭、現在の残高、管理者へ渡す金額を0円以上の整数で入力してください");
     }
-    const currentCashBalance = previousChangeAmount + reportedAmount;
     if (cashCollectedAmount > currentCashBalance) {
       throw new Error("管理者へ渡す金額が現在の残高を超えています");
     }
@@ -621,6 +621,7 @@ export async function upsertWorkReport(formData: FormData) {
       payment_method: paymentMethod,
       card_statement_url: paymentMethod === "card" ? cardStatementUrl : null,
       previous_change_amount: paymentMethod === "cash" ? previousChangeAmount : null,
+      current_cash_balance: paymentMethod === "cash" ? currentCashBalance : null,
       change_amount: paymentMethod === "cash" ? changeAmount : null,
       cash_collected_amount: paymentMethod === "cash" ? cashCollectedAmount : null,
       approval_status: "pending",
