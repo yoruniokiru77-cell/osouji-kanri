@@ -861,6 +861,7 @@ button:disabled { cursor: wait; opacity: .72; }
 .payment-review a { color: #8eb8ff; font-weight: 800; }
 .warning-text { display: flex; gap: 5px; color: #ffc766; }
 .approval-side {
+  min-width: 0;
   display: grid;
   align-content: start;
   justify-items: end;
@@ -873,17 +874,22 @@ button:disabled { cursor: wait; opacity: .72; }
 .approval-side > span { display: flex; align-items: center; gap: 5px; }
 .approval-actions { display: flex; gap: 7px; margin-top: 7px; }
 .approval-amount-form {
+  width: 100%;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: end;
   gap: 7px;
 }
 .approval-amount-form label {
-  width: 150px;
+  width: min(100%, 170px);
   display: grid;
   gap: 4px;
 }
+.approval-amount-form .currency-input {
+  width: 100%;
+}
 .approval-amount-form fieldset {
-  width: 180px;
+  width: min(100%, 180px);
   margin: 0;
   padding: 8px;
   border: 1px solid var(--line);
@@ -896,6 +902,8 @@ button:disabled { cursor: wait; opacity: .72; }
   font-weight: 800;
 }
 .approval-amount-form input {
+  width: 100%;
+  max-width: 100%;
   min-height: 34px;
   padding-top: 7px;
   padding-bottom: 7px;
