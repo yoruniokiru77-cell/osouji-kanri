@@ -77,7 +77,7 @@ function createWeekCalendar(
 ) {
   if (bookings.length === 0) return [];
 
-  const firstWeekStartKey = startOfWeekMonday(shiftDate(startDateKey, 1));
+  const firstWeekStartKey = startOfWeekMonday(startDateKey);
   const firstDate = dateFromKey(firstWeekStartKey);
   const lastDate = dateFromKey(reservationDateKey(bookings[bookings.length - 1].scheduled_at));
   const weekCount = Math.max(
@@ -140,7 +140,7 @@ export default async function StaffDashboard({
   const now = new Date();
   const todayKey = dateKeyFormatter.format(now);
   const selectedDate = isDateKey(query.date) ? query.date! : todayKey;
-  const calendarStartDate = earlierDateKey(selectedDate, todayKey);
+  const calendarStartDate = startOfWeekMonday(earlierDateKey(selectedDate, todayKey));
   const reservationWindowStart = startOfDayJst(calendarStartDate);
   const reservationWindowEnd = startOfDayJst(shiftDate(calendarStartDate, 90));
   const { reservations, expenses } = await getCachedStaffDashboardData(
@@ -153,10 +153,7 @@ export default async function StaffDashboard({
   const selectedBookings = reservations.filter(
     (item) => reservationDateKey(item.scheduled_at) === selectedDate,
   );
-  const upcoming = reservations.filter(
-    (item) => reservationDateKey(item.scheduled_at) !== selectedDate,
-  );
-  const upcomingWeeks = createWeekCalendar(calendarStartDate, upcoming, reservationDateKey);
+  const scheduleWeeks = createWeekCalendar(calendarStartDate, reservations, reservationDateKey);
   const pendingCount = expenses.filter((item) => item.status === "requested").length;
   const selectedDateLabel = new Intl.DateTimeFormat("ja-JP", {
     month: "long",
@@ -331,13 +328,13 @@ export default async function StaffDashboard({
           </div>
         </section>
 
-        {upcoming.length > 0 ? (
+        {reservations.length > 0 ? (
           <section className="page-section fade-up delay-3">
             <div className="section-heading">
               <h2>予定カレンダー</h2>
-              <span>{upcoming.length}件</span>
+              <span>{reservations.length}件</span>
             </div>
-            <WeeklyScheduleCalendar weeks={upcomingWeeks} />
+            <WeeklyScheduleCalendar weeks={scheduleWeeks} />
           </section>
         ) : null}
 
