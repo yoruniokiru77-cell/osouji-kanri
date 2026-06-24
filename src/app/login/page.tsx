@@ -1,12 +1,19 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { signIn } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { isAdminHost } from "@/lib/domain";
 
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  const headerStore = await headers();
+  if (isAdminHost(headerStore.get("host"))) {
+    redirect("/admin/login");
+  }
+
   if (process.env.SINGLE_USER_MODE === "true") {
     redirect("/auth/auto");
   }

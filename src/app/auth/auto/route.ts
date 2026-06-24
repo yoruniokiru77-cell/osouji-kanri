@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAdminHost } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 
 function redirectUrl(request: Request, pathname: string) {
@@ -16,6 +17,11 @@ function redirectUrl(request: Request, pathname: string) {
 }
 
 export async function GET(request: Request) {
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  if (isAdminHost(host)) {
+    return NextResponse.redirect(redirectUrl(request, "/admin/login"));
+  }
+
   if (process.env.SINGLE_USER_MODE !== "true") {
     return NextResponse.redirect(redirectUrl(request, "/login"));
   }
