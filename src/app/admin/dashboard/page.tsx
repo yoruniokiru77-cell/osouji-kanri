@@ -90,6 +90,11 @@ export default async function AdminDashboard({
       .filter((report) => report.approval_status === "pending")
       .map((report) => ({ reservation, report })),
   );
+  const approvedReports = reservations.flatMap((reservation) =>
+    reservation.work_reports
+      .filter((report) => report.approval_status === "approved" && reservation.status === "completed")
+      .map((report) => ({ reservation, report })),
+  );
   const unreportedReservations = reservations.filter(
     (reservation) =>
       reservation.status === "scheduled" &&
@@ -158,6 +163,11 @@ export default async function AdminDashboard({
             <strong>{pendingReports.length}件</strong>
           </div>
           <div>
+            <CheckCircle2 size={18} />
+            <span>承認済み実績</span>
+            <strong>{approvedReports.length}件</strong>
+          </div>
+          <div>
             <AlertTriangle size={18} />
             <span>未報告案件</span>
             <strong>{unreportedReservations.length}件</strong>
@@ -206,7 +216,7 @@ export default async function AdminDashboard({
 
       <section className="admin-section" id="approvals">
         <div className="admin-section-heading">
-          <div><ClipboardCheck size={19} /><span><h2>実績承認</h2><p>承認すると売上と給与計算へ反映されます</p></span></div>
+          <div><ClipboardCheck size={19} /><span><h2>承認待ちの実績</h2><p>承認すると売上と給与計算へ反映されます</p></span></div>
           <strong>{pendingReports.length}件</strong>
         </div>
         {pendingReports.length === 0 ? (
@@ -269,6 +279,50 @@ export default async function AdminDashboard({
                 </div>
               </article>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="admin-section" id="approved-reports">
+        <div className="admin-section-heading">
+          <div><CheckCircle2 size={19} /><span><h2>承認済み実績</h2><p>確定売上と給与計算に反映済みの案件</p></span></div>
+          <strong>{approvedReports.length}件</strong>
+        </div>
+        {approvedReports.length === 0 ? (
+          <div className="admin-empty">
+            <CheckCircle2 size={25} />
+            <p>承認済みの実績はありません</p>
+          </div>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>日時</th>
+                  <th>区分</th>
+                  <th>案件</th>
+                  <th>作業者</th>
+                  <th>支払</th>
+                  <th className="numeric">売上</th>
+                </tr>
+              </thead>
+              <tbody>
+                {approvedReports.map(({ reservation, report }) => (
+                  <tr key={report.id}>
+                    <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
+                    <td>{reservation.service_categories?.name ?? "未設定"}</td>
+                    <td>
+                      <strong>{reservation.customer_name || "お客様名未入力"}</strong>
+                      <small>{reservation.service_content}</small>
+                      <small>{reservation.address}</small>
+                    </td>
+                    <td>{workerNames(reservation) || "未設定"}</td>
+                    <td>{paymentLabel(report.payment_method)}</td>
+                    <td className="numeric">{formatCurrency(Number(report.reported_amount))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
