@@ -25,7 +25,6 @@ const navigation = [
 
 export function AdminLayout({
   children,
-  displayName,
 }: {
   children: React.ReactNode;
   displayName: string;
@@ -54,7 +53,7 @@ export function AdminLayout({
           })}
         </nav>
         <div className="admin-user">
-          <span>{displayName}</span>
+          <span>管理者</span>
           <small>管理者アカウント</small>
           <LogoutButton />
         </div>
