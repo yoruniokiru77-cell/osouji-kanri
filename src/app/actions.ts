@@ -123,6 +123,11 @@ function redirectWorkReportError(message: string, reservationId?: string) {
   redirect(`/staff/report?${params.toString()}`);
 }
 
+function redirectScheduleEditError(reservationId: string, message: string) {
+  const params = new URLSearchParams({ error: message });
+  redirect(`/staff/schedule/${reservationId}?${params.toString()}`);
+}
+
 function revalidateStaffData() {
   clearCachedData(CACHE_TAGS.staff);
   revalidatePath("/staff/dashboard");
@@ -415,12 +420,19 @@ export async function cancelStaffReservation(formData: FormData) {
   const reservationId = readString(formData, "reservation_id");
   const scheduledDate = readString(formData, "scheduled_date");
 
+  if (!reservationId) {
+    redirect("/staff/dashboard?error=delete");
+  }
+
   const { error } = await supabase.rpc("cancel_own_scheduled_reservation", {
     target_reservation_id: reservationId,
   });
 
   if (error) {
-    throw new Error(error.message);
+    redirectScheduleEditError(
+      reservationId,
+      "予定を削除できませんでした。削除できるのは、自分が登録した未完了の予定のみです。",
+    );
   }
 
   revalidateStaffData();

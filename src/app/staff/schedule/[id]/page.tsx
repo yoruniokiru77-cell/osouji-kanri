@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Save } from "lucide-react";
+import { AlertCircle, ArrowLeft, Save } from "lucide-react";
 import { notFound } from "next/navigation";
 import { updateStaffReservation } from "@/app/actions";
 import { DeleteReservationForm } from "@/components/DeleteReservationForm";
@@ -28,11 +28,14 @@ function toDateTimeLocal(value: string) {
 
 export default async function StaffScheduleEditPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const profile = await requireRole("staff");
   const { id } = await params;
+  const query = await searchParams;
   const supabase = await createClient();
   const [reservationResult, masters] = await Promise.all([
     supabase
@@ -72,6 +75,12 @@ export default async function StaffScheduleEditPage({
           <ArrowLeft size={16} />
           予定一覧へ戻る
         </Link>
+        {query.error ? (
+          <div className="form-error-box">
+            <AlertCircle size={18} />
+            <span>{query.error}</span>
+          </div>
+        ) : null}
         {!editable ? (
           <div className="empty-card">
             <p>完了済み、作業中、キャンセル済みの予定は変更できません。</p>
