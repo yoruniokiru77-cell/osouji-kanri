@@ -948,6 +948,8 @@ button:disabled { cursor: wait; opacity: .72; }
 .finance-panel header svg { color: #76a9ff; }
 .finance-panel header strong { font-size: 14px; }
 .finance-row { min-height: 42px; font-size: 11px; }
+.finance-row.highlight { background: rgba(36,189,131,.08); border-bottom: 1px solid rgba(36,189,131,.16); }
+.finance-row.highlight span { color: #8ee5c3; font-weight: 800; }
 .finance-row + .finance-row { border-top: 1px solid var(--line); }
 .finance-panel > p { padding: 12px 14px; margin: 0; font-size: 10px; }
 .category-sales { margin-top: 13px; padding-top: 14px; border-top: 1px solid var(--line); }

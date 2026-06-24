@@ -120,6 +120,9 @@ export default async function AdminDashboard({
   const pendingExpenses = expenses.filter((expense) => expense.status === "requested");
   const completedCount = reservations.filter(isApprovedCompleted).length;
   const scheduledCount = reservations.filter((item) => item.status === "scheduled").length;
+  const otaTotalSales = reservations
+    .filter(isApprovedCompleted)
+    .reduce((sum, item) => sum + otaSalesShare(item), 0);
   const categorySales = categories
     .map((category) => {
       const categoryReservations = reservations.filter(
@@ -129,7 +132,6 @@ export default async function AdminDashboard({
         id: category.id,
         name: category.name,
         count: categoryReservations.length,
-        otaSales: categoryReservations.reduce((sum, item) => sum + otaSalesShare(item), 0),
         sales: categoryReservations.reduce((sum, item) => sum + Number(item.amount), 0),
       };
     })
@@ -382,6 +384,7 @@ export default async function AdminDashboard({
         <div className="finance-columns">
           <article className="finance-panel">
             <header><span><UserRound size={17} />従業員給与</span><strong>{formatCurrency(summary.totalPayroll)}</strong></header>
+            <div className="finance-row highlight"><span>太田売上合計</span><strong>{formatCurrency(otaTotalSales)}</strong></div>
             {summary.payroll.map((item) => (
               <div className="finance-row" key={item.staffName}><span>{item.staffName}</span><strong>{formatCurrency(item.amount)}</strong></div>
             ))}
@@ -402,7 +405,7 @@ export default async function AdminDashboard({
               <article key={item.id}>
                 <span>{item.name}</span>
                 <strong>{formatCurrency(item.sales)}</strong>
-                <small>{item.count}件 / 太田売上 {formatCurrency(item.otaSales)}</small>
+                <small>{item.count}件</small>
               </article>
             ))}
           </div>
