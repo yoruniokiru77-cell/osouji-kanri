@@ -23,6 +23,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { DeleteWorkerForm } from "@/components/DeleteWorkerForm";
 import { DeleteServiceCategoryForm } from "@/components/DeleteServiceCategoryForm";
 import { PurchaseExpenseForm } from "@/components/PurchaseExpenseForm";
+import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
 import { getCachedAdminDashboardData } from "@/lib/cached-data";
 import { calculateSummary, formatCurrency } from "@/lib/finance";
@@ -339,12 +340,16 @@ export default async function AdminDashboard({
                           ))}
                         </div>
                       </fieldset>
-                      <button className="button" type="submit">承認する</button>
+                      <SubmitButton className="button" pendingLabel="承認中...">
+                        承認する
+                      </SubmitButton>
                     </form>
                     <form action={reviewWorkReport}>
                       <input name="report_id" type="hidden" value={report.id} />
                       <input name="decision" type="hidden" value="rejected" />
-                      <button className="button danger" type="submit">差し戻す</button>
+                      <SubmitButton className="button danger" pendingLabel="差し戻し中...">
+                        差し戻す
+                      </SubmitButton>
                     </form>
                   </div>
                 </div>
