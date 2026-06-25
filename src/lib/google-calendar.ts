@@ -1,6 +1,7 @@
 type CalendarReservation = {
   address: string;
   customer_name: string | null;
+  id: string;
   customer_phone: string | null;
   notes: string | null;
   parking_available: boolean;
@@ -11,6 +12,11 @@ type CalendarReservation = {
 
 type GoogleCalendarEvent = {
   id: string;
+  location?: string;
+  start?: {
+    dateTime?: string;
+  };
+  summary?: string;
 };
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -56,6 +62,11 @@ function buildEventBody(reservation: CalendarReservation) {
       dateTime: addMinutes(reservation.scheduled_at, DEFAULT_EVENT_MINUTES),
       timeZone: "Asia/Tokyo",
     },
+    extendedProperties: {
+      private: {
+        reservation_id: reservation.id,
+      },
+    },
     location: reservation.address,
     start: {
       dateTime: reservation.scheduled_at,
@@ -63,6 +74,15 @@ function buildEventBody(reservation: CalendarReservation) {
     },
     summary: `${reservation.customer_name ? `${reservation.customer_name} ` : ""}${reservation.service_content}`,
   };
+}
+
+function getEventSummary(reservation: CalendarReservation) {
+  return `${reservation.customer_name ? `${reservation.customer_name} ` : ""}${reservation.service_content}`;
+}
+
+function isSameStartTime(left: string | undefined, right: string) {
+  if (!left) return false;
+  return Math.abs(new Date(left).getTime() - new Date(right).getTime()) < 60_000;
 }
 
 async function getAccessToken(config: NonNullable<ReturnType<typeof getGoogleCalendarConfig>>) {
@@ -157,12 +177,60 @@ export async function upsertGoogleCalendarEvent(
   return eventId;
 }
 
-export async function deleteGoogleCalendarEvent(eventId: string | null) {
+async function findGoogleCalendarEventId(
+  reservation: CalendarReservation,
+  config: NonNullable<ReturnType<typeof getGoogleCalendarConfig>>,
+) {
+  const privateSearch = await requestGoogleCalendar(
+    `/events?${new URLSearchParams({
+      privateExtendedProperty: `reservation_id=${reservation.id}`,
+      singleEvents: "true",
+    }).toString()}`,
+    { method: "GET" },
+    config,
+  );
+  const privateData = (await privateSearch.json()) as { items?: GoogleCalendarEvent[] };
+  const privateMatch = privateData.items?.find((event) => event.id);
+  if (privateMatch?.id) return privateMatch.id;
+
+  const start = new Date(reservation.scheduled_at);
+  const timeMin = new Date(start.getTime() - 60 * 60 * 1000).toISOString();
+  const timeMax = new Date(start.getTime() + DEFAULT_EVENT_MINUTES * 60 * 1000 + 60 * 60 * 1000).toISOString();
+  const response = await requestGoogleCalendar(
+    `/events?${new URLSearchParams({
+      q: reservation.customer_name || reservation.service_content,
+      singleEvents: "true",
+      timeMax,
+      timeMin,
+    }).toString()}`,
+    { method: "GET" },
+    config,
+  );
+  const data = (await response.json()) as { items?: GoogleCalendarEvent[] };
+  const expectedSummary = getEventSummary(reservation);
+  const fallbackMatch = data.items?.find(
+    (event) =>
+      event.id &&
+      event.summary === expectedSummary &&
+      event.location === reservation.address &&
+      isSameStartTime(event.start?.dateTime, reservation.scheduled_at),
+  );
+
+  return fallbackMatch?.id ?? null;
+}
+
+export async function deleteGoogleCalendarEvent(
+  eventId: string | null,
+  reservation?: CalendarReservation | null,
+) {
   const config = getGoogleCalendarConfig();
-  if (!config || !eventId) return;
+  if (!config) return;
+
+  const targetEventId = eventId || (reservation ? await findGoogleCalendarEventId(reservation, config) : null);
+  if (!targetEventId) return;
 
   await requestGoogleCalendar(
-    `/events/${encodeURIComponent(eventId)}`,
+    `/events/${encodeURIComponent(targetEventId)}`,
     {
       method: "DELETE",
     },

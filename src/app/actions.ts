@@ -34,6 +34,7 @@ type ServiceItemInput = {
 type CalendarReservationInput = {
   address: string;
   customer_name: string | null;
+  id: string;
   customer_phone: string | null;
   notes: string | null;
   parking_available: boolean;
@@ -106,19 +107,25 @@ async function syncReservationToGoogleCalendar(
   try {
     const syncedEventId = await upsertGoogleCalendarEvent(googleCalendarEventId, reservation);
     if (syncedEventId && syncedEventId !== googleCalendarEventId) {
-      await supabase
+      const { error } = await supabase
         .from("reservations")
         .update({ google_calendar_event_id: syncedEventId })
         .eq("id", reservationId);
+      if (error) {
+        console.error("Google Calendar event id save failed", error);
+      }
     }
   } catch (error) {
     console.error("Google Calendar sync failed", error);
   }
 }
 
-async function deleteReservationFromGoogleCalendar(googleCalendarEventId: string | null) {
+async function deleteReservationFromGoogleCalendar(
+  googleCalendarEventId: string | null,
+  reservation: CalendarReservationInput | null,
+) {
   try {
-    await deleteGoogleCalendarEvent(googleCalendarEventId);
+    await deleteGoogleCalendarEvent(googleCalendarEventId, reservation);
   } catch (error) {
     console.error("Google Calendar delete failed", error);
   }
@@ -328,6 +335,7 @@ export async function createStaffReservation(formData: FormData) {
   const calendarReservation = {
     address: readString(formData, "address"),
     customer_name: readString(formData, "customer_name") || null,
+    id: reservationId,
     customer_phone: readString(formData, "customer_phone") || null,
     notes: readString(formData, "notes") || null,
     parking_available: readString(formData, "parking_available") === "true",
@@ -495,6 +503,7 @@ export async function updateStaffReservation(formData: FormData) {
     {
       address: readString(formData, "address"),
       customer_name: readString(formData, "customer_name") || null,
+      id: reservationId,
       customer_phone: readString(formData, "customer_phone") || null,
       notes: readString(formData, "notes") || null,
       parking_available: readString(formData, "parking_available") === "true",
@@ -652,6 +661,7 @@ export async function updateAdminReservation(formData: FormData) {
     {
       address: readString(formData, "address"),
       customer_name: readString(formData, "customer_name") || null,
+      id: reservationId,
       customer_phone: readString(formData, "customer_phone") || null,
       notes: readString(formData, "notes") || null,
       parking_available: readString(formData, "parking_available") === "true",
@@ -679,7 +689,7 @@ export async function cancelStaffReservation(formData: FormData) {
 
   const { data: existingReservation } = await supabase
     .from("reservations")
-    .select("google_calendar_event_id")
+    .select("address, customer_name, customer_phone, google_calendar_event_id, notes, parking_available, parking_notes, scheduled_at, service_content")
     .eq("id", reservationId)
     .single();
 
@@ -694,7 +704,22 @@ export async function cancelStaffReservation(formData: FormData) {
     );
   }
 
-  await deleteReservationFromGoogleCalendar(existingReservation?.google_calendar_event_id ?? null);
+  await deleteReservationFromGoogleCalendar(
+    existingReservation?.google_calendar_event_id ?? null,
+    existingReservation
+      ? {
+          address: existingReservation.address,
+          customer_name: existingReservation.customer_name,
+          customer_phone: existingReservation.customer_phone,
+          id: reservationId,
+          notes: existingReservation.notes,
+          parking_available: existingReservation.parking_available,
+          parking_notes: existingReservation.parking_notes,
+          scheduled_at: existingReservation.scheduled_at,
+          service_content: existingReservation.service_content,
+        }
+      : null,
+  );
 
   revalidateStaffData();
   revalidateAdminData();
