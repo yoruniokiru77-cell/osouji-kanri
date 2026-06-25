@@ -5,6 +5,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile, requireRole } from "@/lib/auth";
 import { CACHE_TAGS, clearCachedData } from "@/lib/cached-data";
+import {
+  deleteGoogleCalendarEvent,
+  upsertGoogleCalendarEvent,
+} from "@/lib/google-calendar";
 
 function readString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -26,6 +30,19 @@ type ServiceItemInput = {
   quantity: number;
   sort_order: number;
 };
+
+type CalendarReservationInput = {
+  address: string;
+  customer_name: string | null;
+  customer_phone: string | null;
+  notes: string | null;
+  parking_available: boolean;
+  parking_notes: string | null;
+  scheduled_at: string;
+  service_content: string;
+};
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 function readServiceItems(formData: FormData) {
   const ids = formData.getAll("service_content_ids").map(String);
@@ -78,6 +95,33 @@ function buildServiceContentLabel(
     })
     .filter(Boolean)
     .join("、");
+}
+
+async function syncReservationToGoogleCalendar(
+  supabase: SupabaseServerClient,
+  reservationId: string,
+  googleCalendarEventId: string | null,
+  reservation: CalendarReservationInput,
+) {
+  try {
+    const syncedEventId = await upsertGoogleCalendarEvent(googleCalendarEventId, reservation);
+    if (syncedEventId && syncedEventId !== googleCalendarEventId) {
+      await supabase
+        .from("reservations")
+        .update({ google_calendar_event_id: syncedEventId })
+        .eq("id", reservationId);
+    }
+  } catch (error) {
+    console.error("Google Calendar sync failed", error);
+  }
+}
+
+async function deleteReservationFromGoogleCalendar(googleCalendarEventId: string | null) {
+  try {
+    await deleteGoogleCalendarEvent(googleCalendarEventId);
+  } catch (error) {
+    console.error("Google Calendar delete failed", error);
+  }
 }
 
 async function getToolIdsWithAutoMappings(
@@ -280,22 +324,33 @@ export async function createStaffReservation(formData: FormData) {
 
   const serviceContentLabel = buildServiceContentLabel(serviceItems, serviceContents);
   const toolIds = await getToolIdsWithAutoMappings(supabase, serviceItems, manualToolIds);
+  const scheduledAt = asJstTimestamp(readString(formData, "scheduled_at"));
+  const calendarReservation = {
+    address: readString(formData, "address"),
+    customer_name: readString(formData, "customer_name") || null,
+    customer_phone: readString(formData, "customer_phone") || null,
+    notes: readString(formData, "notes") || null,
+    parking_available: readString(formData, "parking_available") === "true",
+    parking_notes: readString(formData, "parking_notes") || null,
+    scheduled_at: scheduledAt,
+    service_content: serviceContentLabel,
+  };
 
   const { error } = await supabase
     .from("reservations")
     .insert({
       id: reservationId,
-      scheduled_at: asJstTimestamp(readString(formData, "scheduled_at")),
-      customer_name: readString(formData, "customer_name") || null,
-      customer_phone: readString(formData, "customer_phone") || null,
-      address: readString(formData, "address"),
+      scheduled_at: scheduledAt,
+      customer_name: calendarReservation.customer_name,
+      customer_phone: calendarReservation.customer_phone,
+      address: calendarReservation.address,
       amount: 0,
       service_content: serviceContentLabel,
       service_content_id: serviceItems.find((item) => item.service_content_id)?.service_content_id ?? null,
       service_category_id: readString(formData, "service_category_id"),
-      parking_available: readString(formData, "parking_available") === "true",
-      parking_notes: readString(formData, "parking_notes") || null,
-      notes: readString(formData, "notes") || null,
+      parking_available: calendarReservation.parking_available,
+      parking_notes: calendarReservation.parking_notes,
+      notes: calendarReservation.notes,
       status: "scheduled",
       created_by: profile.id,
     });
@@ -363,6 +418,8 @@ export async function createStaffReservation(formData: FormData) {
     }
   }
 
+  await syncReservationToGoogleCalendar(supabase, reservationId, null, calendarReservation);
+
   revalidateStaffData();
   revalidateAdminData();
   revalidatePath("/staff/schedule");
@@ -382,10 +439,34 @@ export async function updateStaffReservation(formData: FormData) {
     formData.getAll("tool_ids").map(String),
   );
   const scheduledAt = readString(formData, "scheduled_at");
+  const serviceContentIds = serviceItems
+    .map((item) => item.service_content_id)
+    .filter((id): id is string => Boolean(id));
 
   if (workerIds.length === 0) {
     throw new Error("作業担当者を1人以上選択してください");
   }
+
+  const { data: serviceContents } =
+    serviceContentIds.length > 0
+      ? await supabase
+          .from("service_contents")
+          .select("id, name")
+          .in("id", serviceContentIds)
+          .eq("active", true)
+      : { data: [] };
+
+  if (!serviceContents || serviceContents.length !== serviceContentIds.length) {
+    throw new Error("作業内容を選択してください");
+  }
+
+  const serviceContentLabel = buildServiceContentLabel(serviceItems, serviceContents);
+
+  const { data: existingReservation } = await supabase
+    .from("reservations")
+    .select("google_calendar_event_id")
+    .eq("id", reservationId)
+    .single();
 
   const { error } = await supabase.rpc("update_own_scheduled_reservation", {
     target_address: readString(formData, "address"),
@@ -406,6 +487,22 @@ export async function updateStaffReservation(formData: FormData) {
   if (error) {
     throw new Error(error.message);
   }
+
+  await syncReservationToGoogleCalendar(
+    supabase,
+    reservationId,
+    existingReservation?.google_calendar_event_id ?? null,
+    {
+      address: readString(formData, "address"),
+      customer_name: readString(formData, "customer_name") || null,
+      customer_phone: readString(formData, "customer_phone") || null,
+      notes: readString(formData, "notes") || null,
+      parking_available: readString(formData, "parking_available") === "true",
+      parking_notes: readString(formData, "parking_notes") || null,
+      scheduled_at: asJstTimestamp(scheduledAt),
+      service_content: serviceContentLabel,
+    },
+  );
 
   const selectedDate = scheduledAt.slice(0, 10);
   revalidateStaffData();
@@ -448,11 +545,17 @@ export async function updateAdminReservation(formData: FormData) {
   }
 
   const serviceContentLabel = buildServiceContentLabel(serviceItems, serviceContents);
+  const scheduledAt = readString(formData, "scheduled_at");
+  const { data: existingReservation } = await supabase
+    .from("reservations")
+    .select("google_calendar_event_id")
+    .eq("id", reservationId)
+    .single();
 
   const { error } = await supabase
     .from("reservations")
     .update({
-      scheduled_at: asJstTimestamp(readString(formData, "scheduled_at")),
+      scheduled_at: asJstTimestamp(scheduledAt),
       customer_name: readString(formData, "customer_name") || null,
       customer_phone: readString(formData, "customer_phone") || null,
       address: readString(formData, "address"),
@@ -542,6 +645,22 @@ export async function updateAdminReservation(formData: FormData) {
     if (customToolError) throw new Error(customToolError.message);
   }
 
+  await syncReservationToGoogleCalendar(
+    supabase,
+    reservationId,
+    existingReservation?.google_calendar_event_id ?? null,
+    {
+      address: readString(formData, "address"),
+      customer_name: readString(formData, "customer_name") || null,
+      customer_phone: readString(formData, "customer_phone") || null,
+      notes: readString(formData, "notes") || null,
+      parking_available: readString(formData, "parking_available") === "true",
+      parking_notes: readString(formData, "parking_notes") || null,
+      scheduled_at: asJstTimestamp(scheduledAt),
+      service_content: serviceContentLabel,
+    },
+  );
+
   revalidateAdminData();
   revalidateStaffData();
   revalidatePath(`/admin/reservations/${reservationId}`);
@@ -558,6 +677,12 @@ export async function cancelStaffReservation(formData: FormData) {
     redirect("/staff/dashboard?error=delete");
   }
 
+  const { data: existingReservation } = await supabase
+    .from("reservations")
+    .select("google_calendar_event_id")
+    .eq("id", reservationId)
+    .single();
+
   const { error } = await supabase.rpc("cancel_own_scheduled_reservation", {
     target_reservation_id: reservationId,
   });
@@ -568,6 +693,8 @@ export async function cancelStaffReservation(formData: FormData) {
       "予定を削除できませんでした。削除できるのは、自分が登録した未完了の予定のみです。",
     );
   }
+
+  await deleteReservationFromGoogleCalendar(existingReservation?.google_calendar_event_id ?? null);
 
   revalidateStaffData();
   revalidateAdminData();

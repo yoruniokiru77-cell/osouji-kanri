@@ -68,6 +68,7 @@ export type Reservation = {
   parking_available: boolean;
   parking_notes: string | null;
   notes: string | null;
+  google_calendar_event_id: string | null;
   status: ReservationStatus;
 };
 

@@ -68,6 +68,7 @@ create table if not exists public.reservations (
   parking_available boolean not null default false,
   parking_notes text,
   notes text,
+  google_calendar_event_id text,
   source_system text,
   source_key text,
   status public.reservation_status not null default 'scheduled',
