@@ -72,6 +72,7 @@ create table if not exists public.reservations (
   source_system text,
   source_key text,
   status public.reservation_status not null default 'scheduled',
+  created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
