@@ -752,7 +752,7 @@ button:disabled { cursor: wait; opacity: .72; }
 .admin-section { scroll-margin-top: 20px; margin-top: 20px; }
 .admin-summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 11px;
 }
 .summary-tile {
@@ -783,7 +783,7 @@ button:disabled { cursor: wait; opacity: .72; }
 .summary-tile > em { grid-column: 1 / -1; align-self: end; }
 .attention-strip {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin-top: 11px;
   background: #181b24;
   border: 1px solid var(--line);
@@ -963,6 +963,22 @@ button:disabled { cursor: wait; opacity: .72; }
 .finance-row.highlight span { color: #8ee5c3; font-weight: 800; }
 .finance-row + .finance-row { border-top: 1px solid var(--line); }
 .finance-panel > p { padding: 12px 14px; margin: 0; font-size: 10px; }
+.tax-summary { margin-top: 13px; padding-top: 14px; border-top: 1px solid var(--line); }
+.tax-summary h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; font-size: 12px; }
+.tax-summary h3 svg { color: #76a9ff; }
+.tax-summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.tax-summary-grid article {
+  min-height: 64px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255,255,255,.02);
+}
+.tax-summary-grid span { color: var(--muted); font-size: 9px; }
+.tax-summary-grid strong { font-size: 14px; }
 .category-sales { margin-top: 13px; padding-top: 14px; border-top: 1px solid var(--line); }
 .category-sales h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; font-size: 12px; }
 .category-sales h3 svg { color: #76a9ff; }
@@ -1154,6 +1170,7 @@ button:disabled { cursor: wait; opacity: .72; }
 
 @media (max-width: 1050px) {
   .admin-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tax-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .category-sales-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .worker-create-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .worker-create-form .button { grid-column: 1 / -1; }
@@ -1168,7 +1185,7 @@ button:disabled { cursor: wait; opacity: .72; }
   .admin-user { display: none; }
   .admin-main { padding: 20px 14px 50px; }
   .admin-topbar { align-items: flex-start; flex-direction: column; }
-  .admin-summary-grid, .attention-strip, .finance-columns, .worker-grid { grid-template-columns: 1fr; }
+  .admin-summary-grid, .attention-strip, .finance-columns, .tax-summary-grid, .worker-grid { grid-template-columns: 1fr; }
   .attention-strip > div + div { border-left: 0; border-top: 1px solid var(--line); }
   .approval-item { grid-template-columns: 1fr; }
   .approval-side { justify-items: start; padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--line); }

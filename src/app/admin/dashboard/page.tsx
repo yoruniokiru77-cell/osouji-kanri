@@ -123,6 +123,17 @@ export default async function AdminDashboard({
   const otaTotalSales = reservations
     .filter(isApprovedCompleted)
     .reduce((sum, item) => sum + otaSalesShare(item), 0);
+  const otaPayroll = summary.payroll
+    .filter((item) => isOtaWorkerName(item.staffName))
+    .reduce((sum, item) => sum + item.amount, 0);
+  const totalContractorAndSupportCosts = summary.totalContractorCosts;
+  const taxSummaryRows = [
+    { label: "全体売上", value: summary.totalSales },
+    { label: "太田給料", value: otaPayroll },
+    { label: "外注・応援費", value: totalContractorAndSupportCosts },
+    { label: "購入済み経費", value: summary.purchasedExpenses },
+    { label: "申告用利益", value: summary.netProfit },
+  ];
   const categorySales = categories
     .map((category) => {
       const categoryReservations = reservations.filter(
@@ -155,13 +166,23 @@ export default async function AdminDashboard({
         <div className="admin-summary-grid">
           <article className="summary-tile">
             <span className="summary-icon green"><CircleDollarSign size={20} /></span>
-            <div><small>確定売上</small><strong>{formatCurrency(summary.totalSales)}</strong></div>
+            <div><small>全体売上</small><strong>{formatCurrency(summary.totalSales)}</strong></div>
             <em>{completedCount}件完了</em>
           </article>
           <article className="summary-tile">
+            <span className="summary-icon blue"><UserRound size={20} /></span>
+            <div><small>太田売上</small><strong>{formatCurrency(otaTotalSales)}</strong></div>
+            <em>複数作業者は人数割り</em>
+          </article>
+          <article className="summary-tile">
             <span className="summary-icon blue"><Banknote size={20} /></span>
-            <div><small>給与・外注費</small><strong>{formatCurrency(summary.totalPayroll + summary.totalContractorCosts)}</strong></div>
-            <em>給与 {formatCurrency(summary.totalPayroll)}</em>
+            <div><small>太田給料</small><strong>{formatCurrency(otaPayroll)}</strong></div>
+            <em>承認済み実績から計算</em>
+          </article>
+          <article className="summary-tile">
+            <span className="summary-icon amber"><Users size={20} /></span>
+            <div><small>外注・応援費</small><strong>{formatCurrency(totalContractorAndSupportCosts)}</strong></div>
+            <em>すきぴ・その他応援</em>
           </article>
           <article className="summary-tile">
             <span className="summary-icon amber"><ReceiptText size={20} /></span>
@@ -170,8 +191,8 @@ export default async function AdminDashboard({
           </article>
           <article className="summary-tile profit">
             <span className="summary-icon green"><TrendingUp size={20} /></span>
-            <div><small>純利益</small><strong>{formatCurrency(summary.netProfit)}</strong></div>
-            <em>売上から給与・外注・経費を控除</em>
+            <div><small>申告用利益</small><strong>{formatCurrency(summary.netProfit)}</strong></div>
+            <em>全体売上から給与・外注・経費を控除</em>
           </article>
         </div>
 
@@ -379,12 +400,13 @@ export default async function AdminDashboard({
 
       <section className="admin-section" id="finance">
         <div className="admin-section-heading">
-          <div><Banknote size={19} /><span><h2>給与・外注費</h2><p>承認済み実績から自動集計</p></span></div>
+          <div><Banknote size={19} /><span><h2>給与・確定申告用集計</h2><p>承認済み実績から月次の売上・給料・外注・経費を確認</p></span></div>
         </div>
         <div className="finance-columns">
           <article className="finance-panel">
             <header><span><UserRound size={17} />従業員給与</span><strong>{formatCurrency(summary.totalPayroll)}</strong></header>
             <div className="finance-row highlight"><span>太田売上合計</span><strong>{formatCurrency(otaTotalSales)}</strong></div>
+            <div className="finance-row highlight"><span>太田給料</span><strong>{formatCurrency(otaPayroll)}</strong></div>
             {summary.payroll.map((item) => (
               <div className="finance-row" key={item.staffName}><span>{item.staffName}</span><strong>{formatCurrency(item.amount)}</strong></div>
             ))}
@@ -397,6 +419,17 @@ export default async function AdminDashboard({
             ))}
             {summary.contractorCosts.length === 0 ? <p className="muted">外注費データはありません</p> : null}
           </article>
+        </div>
+        <div className="tax-summary">
+          <h3><ReceiptText size={17} />確定申告用の月次内訳</h3>
+          <div className="tax-summary-grid">
+            {taxSummaryRows.map((row) => (
+              <article key={row.label}>
+                <span>{row.label}</span>
+                <strong>{formatCurrency(row.value)}</strong>
+              </article>
+            ))}
+          </div>
         </div>
         <div className="category-sales">
           <h3><Tags size={17} />区分別売上</h3>

@@ -15,7 +15,7 @@ import { LogoutButton } from "@/components/LogoutButton";
 const navigation = [
   { href: "/admin/dashboard#overview", label: "概要", icon: LayoutDashboard },
   { href: "/admin/dashboard#approvals", label: "実績承認", icon: ClipboardCheck },
-  { href: "/admin/dashboard#finance", label: "給与・収支", icon: Banknote },
+  { href: "/admin/dashboard#finance", label: "給与・申告", icon: Banknote },
   { href: "/admin/dashboard#schedules", label: "案件一覧", icon: CalendarDays },
   { href: "/admin/dashboard#expenses", label: "経費", icon: ReceiptText },
   { href: "/admin/dashboard#categories", label: "区分", icon: Tags },
