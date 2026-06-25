@@ -6,6 +6,7 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   MapPin,
+  Pencil,
   ReceiptText,
   Save,
   Tags,
@@ -13,6 +14,7 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import {
   reviewWorkReport,
   saveServiceCategory,
@@ -457,7 +459,7 @@ export default async function AdminDashboard({
         </div>
         <div className="admin-table-wrap">
           <table className="admin-table">
-            <thead><tr><th>日時</th><th>区分</th><th>案件内容</th><th>作業者</th><th>状態</th><th className="numeric">売上</th></tr></thead>
+            <thead><tr><th>日時</th><th>区分</th><th>案件内容</th><th>作業者</th><th>状態</th><th className="numeric">売上</th><th>操作</th></tr></thead>
             <tbody>
               {reservations.map((reservation) => (
                 <tr key={reservation.id}>
@@ -473,9 +475,18 @@ export default async function AdminDashboard({
                   <td>{workerNames(reservation) || "未設定"}</td>
                   <td><span className={statusClass(reservation.status)}>{reservationLabels[reservation.status]}</span></td>
                   <td className="numeric">{isApprovedCompleted(reservation) ? formatCurrency(Number(reservation.amount)) : "-"}</td>
+                  <td>
+                    <Link
+                      className="icon-text-button"
+                      href={`/admin/reservations/${reservation.id}?month=${selectedMonth}`}
+                    >
+                      <Pencil size={14} />
+                      編集
+                    </Link>
+                  </td>
                 </tr>
               ))}
-              {reservations.length === 0 ? <tr><td colSpan={6}>この月の案件はありません</td></tr> : null}
+              {reservations.length === 0 ? <tr><td colSpan={7}>この月の案件はありません</td></tr> : null}
             </tbody>
           </table>
         </div>

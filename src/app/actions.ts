@@ -414,6 +414,140 @@ export async function updateStaffReservation(formData: FormData) {
   redirect(`/staff/dashboard?date=${selectedDate}&updated=1`);
 }
 
+export async function updateAdminReservation(formData: FormData) {
+  await requireRole("admin");
+  const supabase = await createClient();
+  const reservationId = readString(formData, "reservation_id");
+  const selectedMonth = readString(formData, "month") || readString(formData, "scheduled_at").slice(0, 7);
+  const workerIds = [...new Set(formData.getAll("worker_ids").map(String).filter(Boolean))];
+  const serviceItems = readServiceItems(formData);
+  const customToolNames = readCustomToolNames(formData);
+  const toolIds = await getToolIdsWithAutoMappings(
+    supabase,
+    serviceItems,
+    formData.getAll("tool_ids").map(String),
+  );
+  const serviceContentIds = serviceItems
+    .map((item) => item.service_content_id)
+    .filter((id): id is string => Boolean(id));
+
+  if (workerIds.length === 0) {
+    throw new Error("作業担当者を1人以上選択してください");
+  }
+
+  const { data: serviceContents } =
+    serviceContentIds.length > 0
+      ? await supabase
+          .from("service_contents")
+          .select("id, name")
+          .in("id", serviceContentIds)
+      : { data: [] };
+
+  if (!serviceContents || serviceContents.length !== serviceContentIds.length) {
+    throw new Error("作業内容を選択してください");
+  }
+
+  const serviceContentLabel = buildServiceContentLabel(serviceItems, serviceContents);
+
+  const { error } = await supabase
+    .from("reservations")
+    .update({
+      scheduled_at: asJstTimestamp(readString(formData, "scheduled_at")),
+      customer_name: readString(formData, "customer_name") || null,
+      customer_phone: readString(formData, "customer_phone") || null,
+      address: readString(formData, "address"),
+      service_content: serviceContentLabel,
+      service_content_id: serviceItems.find((item) => item.service_content_id)?.service_content_id ?? null,
+      service_category_id: readString(formData, "service_category_id"),
+      parking_available: readString(formData, "parking_available") === "true",
+      parking_notes: readString(formData, "parking_notes") || null,
+      notes: readString(formData, "notes") || null,
+    })
+    .eq("id", reservationId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const { error: clearNormalWorkerError } = await supabase
+    .from("reservation_workers")
+    .delete()
+    .eq("reservation_id", reservationId)
+    .eq("is_supporter", false);
+  if (clearNormalWorkerError) throw new Error(clearNormalWorkerError.message);
+
+  const { error: clearSelectedSupporterError } = await supabase
+    .from("reservation_workers")
+    .delete()
+    .eq("reservation_id", reservationId)
+    .in("worker_id", workerIds);
+  if (clearSelectedSupporterError) throw new Error(clearSelectedSupporterError.message);
+
+  const { error: workerError } = await supabase.from("reservation_workers").insert(
+    workerIds.map((workerId) => ({
+      reservation_id: reservationId,
+      worker_id: workerId,
+      is_supporter: false,
+    })),
+  );
+  if (workerError) throw new Error(workerError.message);
+
+  const { error: serviceItemDeleteError } = await supabase
+    .from("reservation_service_contents")
+    .delete()
+    .eq("reservation_id", reservationId);
+  if (serviceItemDeleteError) throw new Error(serviceItemDeleteError.message);
+
+  const { error: serviceItemError } = await supabase.from("reservation_service_contents").insert(
+    serviceItems.map((item) => ({
+      quantity: item.quantity,
+      reservation_id: reservationId,
+      custom_name: item.custom_name,
+      service_content_id: item.service_content_id,
+      sort_order: item.sort_order,
+    })),
+  );
+  if (serviceItemError) throw new Error(serviceItemError.message);
+
+  const { error: toolDeleteError } = await supabase
+    .from("reservation_tools")
+    .delete()
+    .eq("reservation_id", reservationId);
+  if (toolDeleteError) throw new Error(toolDeleteError.message);
+
+  if (toolIds.length > 0) {
+    const { error: toolError } = await supabase.from("reservation_tools").insert(
+      toolIds.map((toolId) => ({
+        reservation_id: reservationId,
+        tool_id: toolId,
+      })),
+    );
+    if (toolError) throw new Error(toolError.message);
+  }
+
+  const { error: customToolDeleteError } = await supabase
+    .from("reservation_custom_tools")
+    .delete()
+    .eq("reservation_id", reservationId);
+  if (customToolDeleteError) throw new Error(customToolDeleteError.message);
+
+  if (customToolNames.length > 0) {
+    const { error: customToolError } = await supabase.from("reservation_custom_tools").insert(
+      customToolNames.map((name, index) => ({
+        name,
+        reservation_id: reservationId,
+        sort_order: index,
+      })),
+    );
+    if (customToolError) throw new Error(customToolError.message);
+  }
+
+  revalidateAdminData();
+  revalidateStaffData();
+  revalidatePath(`/admin/reservations/${reservationId}`);
+  redirect(`/admin/dashboard?month=${selectedMonth}#schedules`);
+}
+
 export async function cancelStaffReservation(formData: FormData) {
   await requireRole("staff");
   const supabase = await createClient();
