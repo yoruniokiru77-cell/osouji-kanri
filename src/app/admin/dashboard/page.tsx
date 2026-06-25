@@ -316,7 +316,7 @@ export default async function AdminDashboard({
                           <b>¥</b>
                           <input
                             defaultValue={Number(report.reported_amount)}
-                            min="1"
+                            min="0"
                             name="approved_amount"
                             required
                             type="number"

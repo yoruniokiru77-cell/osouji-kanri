@@ -452,8 +452,8 @@ begin
     raise exception '報告が見つかりません';
   end if;
 
-  if target_report.reported_amount <= 0 then
-    raise exception '売上金額が入力されていません';
+  if target_report.reported_amount < 0 then
+    raise exception '売上金額は0円以上で入力してください';
   end if;
 
   update public.work_reports

@@ -843,8 +843,8 @@ export async function reviewWorkReport(formData: FormData) {
     const approvedAmount = readNumber(formData, "approved_amount");
     const reservationId = readString(formData, "reservation_id");
     const workerIds = [...new Set(formData.getAll("admin_worker_ids").map(String).filter(Boolean))];
-    if (!Number.isInteger(approvedAmount) || approvedAmount <= 0) {
-      throw new Error("承認する売上金額は1円以上の整数で入力してください");
+    if (!Number.isInteger(approvedAmount) || approvedAmount < 0) {
+      throw new Error("承認する売上金額は0円以上の整数で入力してください");
     }
     if (!reservationId || workerIds.length === 0) {
       throw new Error("承認する作業者を1人以上選択してください");
