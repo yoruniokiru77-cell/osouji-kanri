@@ -1035,14 +1035,8 @@ export async function reviewWorkReport(formData: FormData) {
     );
     if (workerError) throw new Error(workerError.message);
 
-    const { error: amountError } = await supabase
-      .from("work_reports")
-      .update({ reported_amount: approvedAmount })
-      .eq("id", reportId)
-      .eq("approval_status", "pending");
-    if (amountError) throw new Error(amountError.message);
-
     const { error } = await supabase.rpc("approve_work_report", {
+      approved_amount: approvedAmount,
       report_id: reportId,
     });
     if (error) throw new Error(error.message);
