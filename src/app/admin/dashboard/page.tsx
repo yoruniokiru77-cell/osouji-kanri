@@ -78,6 +78,10 @@ function isOtaWorkerName(name?: string) {
   return Boolean(name?.includes("太田"));
 }
 
+function isIchijoReservation(reservation: ReservationWithRelations) {
+  return Boolean(reservation.service_categories?.name?.includes("一条"));
+}
+
 function otaSalesShare(reservation: ReservationWithRelations) {
   const normalWorkers = reservation.reservation_workers.filter(
     (assignment) => !assignment.is_supporter && assignment.workers,
@@ -121,6 +125,12 @@ export default async function AdminDashboard({
       reservation.work_reports.length === 0,
   );
   const pendingExpenses = expenses.filter((expense) => expense.status === "requested");
+  const linkedCleaningReservationIds = new Set(
+    expenses.flatMap((expense) => expense.expense_reservations?.map((link) => link.reservation_id) ?? []),
+  );
+  const unlinkedIchijoReservations = reservations.filter(
+    (reservation) => isIchijoReservation(reservation) && !linkedCleaningReservationIds.has(reservation.id),
+  );
   const completedCount = reservations.filter(isApprovedCompleted).length;
   const scheduledCount = reservations.filter((item) => item.status === "scheduled").length;
   const otaTotalSales = reservations
@@ -221,11 +231,50 @@ export default async function AdminDashboard({
             <strong>{pendingExpenses.length}件</strong>
           </div>
           <div>
+            <AlertTriangle size={18} />
+            <span>一条領収書未紐づけ</span>
+            <strong>{unlinkedIchijoReservations.length}件</strong>
+          </div>
+          <div>
             <CalendarDays size={18} />
             <span>今月の予定</span>
             <strong>{scheduledCount}件</strong>
           </div>
         </div>
+      </section>
+
+      <section className="admin-section" id="ichijo-cleaning">
+        <div className="admin-section-heading">
+          <div><ReceiptText size={19} /><span><h2>一条クリーニング領収書確認</h2><p>スタッフが領収書経費に紐づけていない一条案件を確認</p></span></div>
+          <strong>{unlinkedIchijoReservations.length}件</strong>
+        </div>
+        {unlinkedIchijoReservations.length === 0 ? (
+          <div className="admin-empty">
+            <CheckCircle2 size={25} />
+            <p>未紐づけの一条案件はありません</p>
+          </div>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead><tr><th>日時</th><th>区分</th><th>案件</th><th>作業者</th><th>状態</th></tr></thead>
+              <tbody>
+                {unlinkedIchijoReservations.map((reservation) => (
+                  <tr key={reservation.id}>
+                    <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
+                    <td>{reservation.service_categories?.name ?? "未設定"}</td>
+                    <td>
+                      <strong>{reservation.customer_name || reservation.service_content}</strong>
+                      <small>{reservation.service_content}</small>
+                      <small>{reservation.address}</small>
+                    </td>
+                    <td>{workerNames(reservation) || "未設定"}</td>
+                    <td><span className={statusClass(reservation.status)}>{reservationLabels[reservation.status]}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="admin-section" id="unreported">
@@ -504,7 +553,19 @@ export default async function AdminDashboard({
               {expenses.map((expense) => (
                 <tr key={expense.id}>
                   <td className="nowrap">{new Date(expense.created_at).toLocaleDateString("ja-JP")}</td>
-                  <td><strong>{expense.expense_categories?.name}</strong><small>{expense.profiles?.display_name} / {expense.note || "備考なし"}</small></td>
+                  <td>
+                    <strong>{expense.expense_categories?.name}</strong>
+                    <small>{expense.profiles?.display_name} / {expense.note || "備考なし"}</small>
+                    {expense.expense_reservations && expense.expense_reservations.length > 0 ? (
+                      <small>
+                        紐づけ:{" "}
+                        {expense.expense_reservations
+                          .map((link) => link.reservations?.customer_name || link.reservations?.service_content)
+                          .filter(Boolean)
+                          .join("、")}
+                      </small>
+                    ) : null}
+                  </td>
                   <td><span className={statusClass(expense.status)}>{expenseLabels[expense.status]}</span></td>
                   <td className="numeric">{formatCurrency(Number(expense.amount))}</td>
                   <td>

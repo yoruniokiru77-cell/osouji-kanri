@@ -126,4 +126,8 @@ export type Expense = {
   created_at: string;
   profiles: Profile | null;
   expense_categories: ExpenseCategory | null;
+  expense_reservations?: {
+    reservation_id: string;
+    reservations: ReservationWithRelations | null;
+  }[];
 };

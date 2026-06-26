@@ -1060,21 +1060,40 @@ export async function createExpense(formData: FormData) {
   const supabase = await createClient();
 
   const amount = readNumber(formData, "amount");
+  const linkedReservationIds = [
+    ...new Set(formData.getAll("linked_reservation_ids").map(String).filter(Boolean)),
+  ];
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error("金額は1円以上の整数で入力してください");
   }
 
-  const { error } = await supabase.from("expenses").insert({
-    staff_id: profile.id,
-    category_id: readString(formData, "category_id"),
-    reservation_id: readString(formData, "reservation_id") || null,
-    amount,
-    note: readString(formData, "note") || null,
-    status: "requested",
-  });
+  const primaryReservationId = linkedReservationIds[0] || readString(formData, "reservation_id") || null;
+  const { data: expense, error } = await supabase
+    .from("expenses")
+    .insert({
+      staff_id: profile.id,
+      category_id: readString(formData, "category_id"),
+      reservation_id: primaryReservationId,
+      amount,
+      note: readString(formData, "note") || null,
+      receipt_url: readString(formData, "receipt_url") || null,
+      status: "requested",
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !expense) {
+    throw new Error(error?.message ?? "経費申請を保存できませんでした");
+  }
+
+  if (linkedReservationIds.length > 0) {
+    const { error: linkError } = await supabase.from("expense_reservations").insert(
+      linkedReservationIds.map((reservationId) => ({
+        expense_id: expense.id,
+        reservation_id: reservationId,
+      })),
+    );
+    if (linkError) throw new Error(linkError.message);
   }
 
   revalidateStaffData();

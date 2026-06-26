@@ -563,6 +563,12 @@ button:disabled { cursor: wait; opacity: .72; }
 .reconciliation-ok strong, .reconciliation-error strong { font-size: 14px; }
 .reconciliation-ok small, .reconciliation-error small { grid-column: 1 / -1; font-size: 9px; }
 .field-help { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.form-check-panel { margin: 0; padding: 11px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255,255,255,.03); }
+.form-check-panel legend { padding: 0 4px; font-size: 12px; font-weight: 800; }
+.check-list { display: grid; gap: 8px; margin-top: 9px; }
+.check-list label { min-height: 40px; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.035); }
+.check-list input { width: 16px; height: 16px; flex: 0 0 auto; padding: 0; accent-color: var(--green); }
+.check-list span { min-width: 0; overflow-wrap: anywhere; font-size: 11px; line-height: 1.45; }
 .tool-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .tool-fieldset legend { margin-bottom: 8px; font-size: 12px; font-weight: 800; }
 .tool-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -783,7 +789,7 @@ button:disabled { cursor: wait; opacity: .72; }
 .summary-tile > em { grid-column: 1 / -1; align-self: end; }
 .attention-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-top: 11px;
   background: #181b24;
   border: 1px solid var(--line);
