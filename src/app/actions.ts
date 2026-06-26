@@ -18,6 +18,16 @@ function readNumber(formData: FormData, key: string) {
   return Number(readString(formData, key));
 }
 
+function parseUrlList(value: string | null | undefined) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [value];
+  } catch {
+    return [value];
+  }
+}
+
 function asJstTimestamp(value: string) {
   if (!value) return value;
   if (/[zZ]|[+-]\d{2}:\d{2}$/.test(value)) return value;
@@ -1129,6 +1139,46 @@ export async function updateExpenseStatus(formData: FormData) {
 
   revalidateAdminData();
   revalidateStaffData();
+}
+
+export async function addExpenseReceipts(formData: FormData) {
+  const profile = await requireRole("staff");
+  const supabase = await createClient();
+  const expenseId = readString(formData, "expense_id");
+  const addedReceiptUrls = parseUrlList(readString(formData, "receipt_urls"));
+
+  if (!expenseId || addedReceiptUrls.length === 0) {
+    throw new Error("追加する領収書画像を選択してください");
+  }
+
+  const { data: expense, error: fetchError } = await supabase
+    .from("expenses")
+    .select("receipt_url, status")
+    .eq("id", expenseId)
+    .eq("staff_id", profile.id)
+    .single();
+
+  if (fetchError || !expense) {
+    throw new Error(fetchError?.message ?? "経費申請を確認できませんでした");
+  }
+  if (expense.status === "rejected") {
+    throw new Error("却下された経費には領収書を追加できません");
+  }
+
+  const currentReceiptUrls = parseUrlList(expense.receipt_url);
+  const nextReceiptUrls = [...new Set([...currentReceiptUrls, ...addedReceiptUrls])];
+  const { error } = await supabase
+    .from("expenses")
+    .update({ receipt_url: JSON.stringify(nextReceiptUrls) })
+    .eq("id", expenseId)
+    .eq("staff_id", profile.id)
+    .neq("status", "rejected");
+
+  if (error) throw new Error(error.message);
+
+  revalidateStaffData();
+  revalidateAdminData();
+  redirect("/staff/expense?receipt=1");
 }
 
 export async function routeAfterLogin() {

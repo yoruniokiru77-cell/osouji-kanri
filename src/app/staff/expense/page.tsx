@@ -1,5 +1,5 @@
 import { ReceiptText } from "lucide-react";
-import { createExpense } from "@/app/actions";
+import { addExpenseReceipts, createExpense } from "@/app/actions";
 import { ExpenseFormToggle } from "@/components/ExpenseFormToggle";
 import { ExpenseReceiptUpload } from "@/components/ExpenseReceiptUpload";
 import { StaffLayout } from "@/components/StaffLayout";
@@ -36,7 +36,7 @@ function parseReceiptUrls(value: string | null) {
 export default async function StaffExpensePage({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string }>;
+  searchParams: Promise<{ receipt?: string; success?: string }>;
 }) {
   const profile = await requireRole("staff");
   const params = await searchParams;
@@ -54,6 +54,7 @@ export default async function StaffExpensePage({
     <StaffLayout title="経費申請">
       <div className="mobile-page">
         {params.success === "1" ? <div className="success-banner">経費申請を送信しました</div> : null}
+        {params.receipt === "1" ? <div className="success-banner">領収書画像を追加しました</div> : null}
         <ExpenseFormToggle>
           <form action={createExpense} className="staff-form glass-card inset-form">
             <h2>経費申請フォーム</h2>
@@ -115,6 +116,13 @@ export default async function StaffExpensePage({
                     <small>{new Date(expense.created_at).toLocaleDateString("ja-JP")}</small>
                   </div>
                   <div><strong>{formatCurrency(Number(expense.amount))}</strong><span className={statusClass(expense.status)}>{expenseLabels[expense.status]}</span></div>
+                  {expense.status !== "rejected" ? (
+                    <form action={addExpenseReceipts} className="expense-receipt-add-form">
+                      <input name="expense_id" type="hidden" value={expense.id} />
+                      <ExpenseReceiptUpload inputName="receipt_urls" />
+                      <button className="button" type="submit">領収書を追加</button>
+                    </form>
+                  ) : null}
                 </article>
               ))}
             </div>

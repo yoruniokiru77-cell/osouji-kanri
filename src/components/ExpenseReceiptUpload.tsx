@@ -4,7 +4,11 @@ import { useState } from "react";
 import { Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export function ExpenseReceiptUpload() {
+type ExpenseReceiptUploadProps = {
+  inputName?: string;
+};
+
+export function ExpenseReceiptUpload({ inputName = "receipt_url" }: ExpenseReceiptUploadProps) {
   const [receiptUrls, setReceiptUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -53,7 +57,7 @@ export function ExpenseReceiptUpload() {
 
   return (
     <div className="receipt-upload-panel">
-      <input name="receipt_url" type="hidden" value={receiptUrls.length > 0 ? JSON.stringify(receiptUrls) : ""} />
+      <input name={inputName} type="hidden" value={receiptUrls.length > 0 ? JSON.stringify(receiptUrls) : ""} />
       <label className="statement-upload">
         <Upload size={17} />
         <span>{receiptUrls.length > 0 ? `${receiptUrls.length}枚添付済み` : "領収書画像を添付"}</span>
