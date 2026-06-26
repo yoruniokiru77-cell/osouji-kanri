@@ -66,6 +66,16 @@ function paymentLabel(method: string) {
   return { cash: "現金", card: "カード", invoice: "請求書", other: "その他" }[method] ?? method;
 }
 
+function parseReceiptUrls(value: string | null) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [value];
+  } catch {
+    return [value];
+  }
+}
+
 function hasApprovedReport(reservation: ReservationWithRelations) {
   return reservation.work_reports.some((report) => report.approval_status === "approved");
 }
@@ -550,46 +560,58 @@ export default async function AdminDashboard({
           <table className="admin-table">
             <thead><tr><th>申請日</th><th>申請者・項目</th><th>状態</th><th className="numeric">金額</th><th>操作</th></tr></thead>
             <tbody>
-              {expenses.map((expense) => (
-                <tr key={expense.id}>
-                  <td className="nowrap">{new Date(expense.created_at).toLocaleDateString("ja-JP")}</td>
-                  <td>
-                    <strong>{expense.expense_categories?.name}</strong>
-                    <small>{expense.profiles?.display_name} / {expense.note || "備考なし"}</small>
-                    {expense.expense_reservations && expense.expense_reservations.length > 0 ? (
-                      <small>
-                        紐づけ:{" "}
-                        {expense.expense_reservations
-                          .map((link) => link.reservations?.customer_name || link.reservations?.service_content)
-                          .filter(Boolean)
-                          .join("、")}
-                      </small>
-                    ) : null}
-                  </td>
-                  <td><span className={statusClass(expense.status)}>{expenseLabels[expense.status]}</span></td>
-                  <td className="numeric">{formatCurrency(Number(expense.amount))}</td>
-                  <td>
-                    <div className="table-actions">
-                      {expense.status === "requested" ? (
-                        <>
-                          <form action={updateExpenseStatus}>
-                            <input name="expense_id" type="hidden" value={expense.id} />
-                            <input name="status" type="hidden" value="approved" />
-                            <button className="button" type="submit">承認</button>
-                          </form>
-                          <form action={updateExpenseStatus}>
-                            <input name="expense_id" type="hidden" value={expense.id} />
-                            <input name="status" type="hidden" value="rejected" />
-                            <button className="button danger" type="submit">却下</button>
-                          </form>
-                        </>
+              {expenses.map((expense) => {
+                const receiptUrls = parseReceiptUrls(expense.receipt_url);
+                return (
+                  <tr key={expense.id}>
+                    <td className="nowrap">{new Date(expense.created_at).toLocaleDateString("ja-JP")}</td>
+                    <td>
+                      <strong>{expense.expense_categories?.name}</strong>
+                      <small>{expense.profiles?.display_name} / {expense.note || "備考なし"}</small>
+                      {expense.expense_reservations && expense.expense_reservations.length > 0 ? (
+                        <small>
+                          紐づけ:{" "}
+                          {expense.expense_reservations
+                            .map((link) => link.reservations?.customer_name || link.reservations?.service_content)
+                            .filter(Boolean)
+                            .join("、")}
+                        </small>
                       ) : null}
-                      {expense.status === "approved" ? <PurchaseExpenseForm expenseId={expense.id} /> : null}
-                      {expense.receipt_url ? <a className="text-link" href={expense.receipt_url} rel="noreferrer" target="_blank">領収書</a> : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      {receiptUrls.length > 0 ? (
+                        <small className="inline-links">
+                          領収書:{" "}
+                          {receiptUrls.map((url, index) => (
+                            <a className="text-link" href={url} key={url} rel="noreferrer" target="_blank">
+                              画像{index + 1}
+                            </a>
+                          ))}
+                        </small>
+                      ) : null}
+                    </td>
+                    <td><span className={statusClass(expense.status)}>{expenseLabels[expense.status]}</span></td>
+                    <td className="numeric">{formatCurrency(Number(expense.amount))}</td>
+                    <td>
+                      <div className="table-actions">
+                        {expense.status === "requested" ? (
+                          <>
+                            <form action={updateExpenseStatus}>
+                              <input name="expense_id" type="hidden" value={expense.id} />
+                              <input name="status" type="hidden" value="approved" />
+                              <button className="button" type="submit">承認</button>
+                            </form>
+                            <form action={updateExpenseStatus}>
+                              <input name="expense_id" type="hidden" value={expense.id} />
+                              <input name="status" type="hidden" value="rejected" />
+                              <button className="button danger" type="submit">却下</button>
+                            </form>
+                          </>
+                        ) : null}
+                        {expense.status === "approved" ? <PurchaseExpenseForm expenseId={expense.id} /> : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {expenses.length === 0 ? <tr><td colSpan={5}>この月の経費申請はありません</td></tr> : null}
             </tbody>
           </table>

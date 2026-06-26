@@ -1107,7 +1107,15 @@ export async function updateExpenseStatus(formData: FormData) {
   const status = readString(formData, "status");
   const receiptUrl = readString(formData, "receipt_url");
 
-  if (status === "purchased" && !receiptUrl) {
+  const expenseId = readString(formData, "expense_id");
+  const { data: existingExpense } = await supabase
+    .from("expenses")
+    .select("receipt_url")
+    .eq("id", expenseId)
+    .maybeSingle();
+  const finalReceiptUrl = receiptUrl || existingExpense?.receipt_url || null;
+
+  if (status === "purchased" && !finalReceiptUrl) {
     throw new Error("購入済みにするには領収書画像が必要です");
   }
 
@@ -1115,9 +1123,9 @@ export async function updateExpenseStatus(formData: FormData) {
     .from("expenses")
     .update({
       status,
-      receipt_url: receiptUrl || null,
+      receipt_url: finalReceiptUrl,
     })
-    .eq("id", readString(formData, "expense_id"));
+    .eq("id", expenseId);
 
   revalidateAdminData();
   revalidateStaffData();

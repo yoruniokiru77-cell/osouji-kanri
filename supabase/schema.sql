@@ -474,12 +474,34 @@ on storage.objects for insert
 to authenticated
 with check (bucket_id = 'receipts' and public.is_admin());
 
+drop policy if exists "staff upload own receipts" on storage.objects;
+create policy "staff upload own receipts"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'receipts'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
 drop policy if exists "admins update receipts" on storage.objects;
 create policy "admins update receipts"
 on storage.objects for update
 to authenticated
 using (bucket_id = 'receipts' and public.is_admin())
 with check (bucket_id = 'receipts' and public.is_admin());
+
+drop policy if exists "staff update own receipts" on storage.objects;
+create policy "staff update own receipts"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'receipts'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'receipts'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
 
 create or replace function public.approve_work_report(report_id uuid, approved_amount numeric default null)
 returns void

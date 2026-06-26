@@ -1,6 +1,7 @@
 import { ReceiptText } from "lucide-react";
 import { createExpense } from "@/app/actions";
 import { ExpenseFormToggle } from "@/components/ExpenseFormToggle";
+import { ExpenseReceiptUpload } from "@/components/ExpenseReceiptUpload";
 import { StaffLayout } from "@/components/StaffLayout";
 import { requireRole } from "@/lib/auth";
 import { getCachedStaffExpenseData } from "@/lib/cached-data";
@@ -22,6 +23,16 @@ function reservationOptionLabel(reservation: ReservationWithRelations) {
     .join(" / ");
 }
 
+function parseReceiptUrls(value: string | null) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [value];
+  } catch {
+    return [value];
+  }
+}
+
 export default async function StaffExpensePage({
   searchParams,
 }: {
@@ -30,7 +41,14 @@ export default async function StaffExpensePage({
   const profile = await requireRole("staff");
   const params = await searchParams;
   const { categories, expenses, reservations } = await getCachedStaffExpenseData(profile.id);
-  const ichijoReservations = reservations.filter(isIchijoReservation);
+  const linkedIchijoReservationIds = new Set(
+    expenses
+      .filter((expense) => expense.status !== "rejected")
+      .flatMap((expense) => expense.expense_reservations?.map((link) => link.reservation_id) ?? []),
+  );
+  const ichijoReservations = reservations.filter(
+    (reservation) => isIchijoReservation(reservation) && !linkedIchijoReservationIds.has(reservation.id),
+  );
 
   return (
     <StaffLayout title="経費申請">
@@ -42,7 +60,10 @@ export default async function StaffExpensePage({
             <label><span>経費項目 *</span><select name="category_id" required><option value="">項目を選択</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <label><span>金額 *</span><div className="currency-input"><b>¥</b><input min="1" name="amount" placeholder="0" required type="number" /></div></label>
             <label><span>関連案件（任意）</span><select name="reservation_id"><option value="">案件に紐付けない</option>{reservations.map((item) => <option key={item.id} value={item.id}>{new Date(item.scheduled_at).toLocaleDateString("ja-JP")} - {item.service_content}</option>)}</select></label>
-            <label><span>領収書URL</span><input name="receipt_url" placeholder="画像URLや共有リンク" type="url" /></label>
+            <div>
+              <span className="form-label">領収書画像</span>
+              <ExpenseReceiptUpload />
+            </div>
             {ichijoReservations.length > 0 ? (
               <fieldset className="form-check-panel">
                 <legend>一条案件のクリーニング領収書に紐づけ</legend>
@@ -79,6 +100,16 @@ export default async function StaffExpensePage({
                           .map((link) => link.reservations?.customer_name || link.reservations?.service_content)
                           .filter(Boolean)
                           .join("、")}
+                      </small>
+                    ) : null}
+                    {parseReceiptUrls(expense.receipt_url).length > 0 ? (
+                      <small>
+                        領収書:{" "}
+                        {parseReceiptUrls(expense.receipt_url).map((url, index) => (
+                          <a className="text-link" href={url} key={url} rel="noreferrer" target="_blank">
+                            画像{index + 1}
+                          </a>
+                        ))}
                       </small>
                     ) : null}
                     <small>{new Date(expense.created_at).toLocaleDateString("ja-JP")}</small>
