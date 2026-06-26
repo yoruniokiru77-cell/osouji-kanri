@@ -81,6 +81,10 @@ function hasApprovedReport(reservation: ReservationWithRelations) {
   return reservation.work_reports.some((report) => report.approval_status === "approved");
 }
 
+function approvedReportFor(reservation: ReservationWithRelations) {
+  return reservation.work_reports.find((report) => report.approval_status === "approved");
+}
+
 function isApprovedCompleted(reservation: ReservationWithRelations) {
   return reservation.status === "completed" && hasApprovedReport(reservation);
 }
@@ -530,31 +534,44 @@ export default async function AdminDashboard({
           <table className="admin-table">
             <thead><tr><th>日時</th><th>区分</th><th>案件内容</th><th>作業者</th><th>状態</th><th className="numeric">売上</th><th>操作</th></tr></thead>
             <tbody>
-              {reservations.map((reservation) => (
-                <tr key={reservation.id}>
-                  <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
-                  <td>{reservation.service_categories?.name ?? "未設定"}</td>
-                  <td>
-                    <strong>{reservation.service_content}</strong>
-                    <small>{reservation.address}</small>
-                    {reservation.customer_name || reservation.customer_phone ? (
-                      <small>{[reservation.customer_name, reservation.customer_phone].filter(Boolean).join(" / ")}</small>
-                    ) : null}
-                  </td>
-                  <td>{workerNames(reservation) || "未設定"}</td>
-                  <td><span className={statusClass(reservation.status)}>{reservationLabels[reservation.status]}</span></td>
-                  <td className="numeric">{isApprovedCompleted(reservation) ? formatCurrency(Number(reservation.amount)) : "-"}</td>
-                  <td>
-                    <Link
-                      className="icon-text-button"
-                      href={`/admin/reservations/${reservation.id}?month=${selectedMonth}`}
-                    >
-                      <Pencil size={14} />
-                      編集
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {reservations.map((reservation) => {
+                const approvedReport = approvedReportFor(reservation);
+                return (
+                  <tr key={reservation.id}>
+                    <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
+                    <td>{reservation.service_categories?.name ?? "未設定"}</td>
+                    <td>
+                      <strong>{reservation.service_content}</strong>
+                      <small>{reservation.address}</small>
+                      {reservation.customer_name || reservation.customer_phone ? (
+                        <small>{[reservation.customer_name, reservation.customer_phone].filter(Boolean).join(" / ")}</small>
+                      ) : null}
+                    </td>
+                    <td>{workerNames(reservation) || "未設定"}</td>
+                    <td><span className={statusClass(reservation.status)}>{reservationLabels[reservation.status]}</span></td>
+                    <td className="numeric">{isApprovedCompleted(reservation) ? formatCurrency(Number(reservation.amount)) : "-"}</td>
+                    <td>
+                      <div className="table-actions">
+                        <Link
+                          className="icon-text-button"
+                          href={`/admin/reservations/${reservation.id}?month=${selectedMonth}`}
+                        >
+                          <Pencil size={14} />
+                          編集
+                        </Link>
+                        {approvedReport && reservation.status === "completed" ? (
+                          <form action={reopenWorkReport}>
+                            <input name="report_id" type="hidden" value={approvedReport.id} />
+                            <SubmitButton className="button" pendingLabel="戻し中...">
+                              承認待ちへ戻す
+                            </SubmitButton>
+                          </form>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {reservations.length === 0 ? <tr><td colSpan={7}>この月の案件はありません</td></tr> : null}
             </tbody>
           </table>
