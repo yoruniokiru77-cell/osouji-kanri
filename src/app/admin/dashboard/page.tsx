@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import {
+  reopenWorkReport,
   reviewWorkReport,
   saveServiceCategory,
   saveWorker,
@@ -441,6 +442,7 @@ export default async function AdminDashboard({
                   <th>作業者</th>
                   <th>支払</th>
                   <th className="numeric">売上</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -456,6 +458,14 @@ export default async function AdminDashboard({
                     <td>{workerNames(reservation) || "未設定"}</td>
                     <td>{paymentLabel(report.payment_method)}</td>
                     <td className="numeric">{formatCurrency(Number(report.reported_amount))}</td>
+                    <td>
+                      <form action={reopenWorkReport}>
+                        <input name="report_id" type="hidden" value={report.id} />
+                        <SubmitButton className="button" pendingLabel="戻し中...">
+                          承認待ちへ戻す
+                        </SubmitButton>
+                      </form>
+                    </td>
                   </tr>
                 ))}
               </tbody>

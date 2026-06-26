@@ -1065,6 +1065,20 @@ export async function reviewWorkReport(formData: FormData) {
   revalidateStaffData();
 }
 
+export async function reopenWorkReport(formData: FormData) {
+  await requireRole("admin");
+  const supabase = await createClient();
+  const reportId = readString(formData, "report_id");
+
+  const { error } = await supabase.rpc("reopen_work_report", {
+    report_id: reportId,
+  });
+  if (error) throw new Error(error.message);
+
+  revalidateAdminData();
+  revalidateStaffData();
+}
+
 export async function createExpense(formData: FormData) {
   const profile = await requireRole("staff");
   const supabase = await createClient();
