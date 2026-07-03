@@ -6,7 +6,6 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   MapPin,
-  Pencil,
   ReceiptText,
   Save,
   Tags,
@@ -23,6 +22,7 @@ import {
   updateExpenseStatus,
 } from "@/app/actions";
 import { AdminLayout } from "@/components/AdminLayout";
+import { AdminScheduleTable } from "@/components/AdminScheduleTable";
 import { DeleteWorkerForm } from "@/components/DeleteWorkerForm";
 import { DeleteServiceCategoryForm } from "@/components/DeleteServiceCategoryForm";
 import { PurchaseExpenseForm } from "@/components/PurchaseExpenseForm";
@@ -81,10 +81,6 @@ function hasApprovedReport(reservation: ReservationWithRelations) {
   return reservation.work_reports.some((report) => report.approval_status === "approved");
 }
 
-function approvedReportFor(reservation: ReservationWithRelations) {
-  return reservation.work_reports.find((report) => report.approval_status === "approved");
-}
-
 function isApprovedCompleted(reservation: ReservationWithRelations) {
   return reservation.status === "completed" && hasApprovedReport(reservation);
 }
@@ -112,19 +108,11 @@ function otaSalesShare(reservation: ReservationWithRelations) {
 export default async function AdminDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{
-    month?: string;
-    schedule_worker?: string;
-    show_cancelled?: string;
-    show_reported?: string;
-  }>;
+  searchParams: Promise<{ month?: string }>;
 }) {
   const profile = await requireRole("admin");
   const params = await searchParams;
   const selectedMonth = params.month ?? new Date().toISOString().slice(0, 7);
-  const selectedScheduleWorker = params.schedule_worker ?? "";
-  const showCancelledSchedules = params.show_cancelled === "1";
-  const showReportedSchedules = params.show_reported === "1";
   const range = monthRange(selectedMonth);
   const { workers, categories, reservations, expenses } = await getCachedAdminDashboardData(
     range.start,
@@ -184,15 +172,6 @@ export default async function AdminDashboard({
     })
     .filter((item) => item.count > 0 || categories.find((category) => category.id === item.id)?.active)
     .sort((a, b) => b.sales - a.sales);
-  const visibleScheduleReservations = reservations.filter((reservation) => {
-    const matchesWorker =
-      !selectedScheduleWorker ||
-      reservation.reservation_workers.some((assignment) => assignment.worker_id === selectedScheduleWorker);
-    const matchesCancelled = showCancelledSchedules || reservation.status !== "cancelled";
-    const matchesReported = showReportedSchedules || reservation.work_reports.length === 0;
-    return matchesWorker && matchesCancelled && matchesReported;
-  });
-
   return (
     <AdminLayout displayName={profile.display_name}>
       <header className="admin-topbar">
@@ -542,89 +521,7 @@ export default async function AdminDashboard({
       </section>
 
       <section className="admin-section" id="schedules">
-        <div className="admin-section-heading">
-          <div><CalendarDays size={19} /><span><h2>案件一覧</h2><p>通常はキャンセル・報告済みを非表示</p></span></div>
-          <strong>{visibleScheduleReservations.length}件</strong>
-        </div>
-        <form className="schedule-filter-form">
-          <input name="month" type="hidden" value={selectedMonth} />
-          <label>
-            <span>作業者</span>
-            <select defaultValue={selectedScheduleWorker} name="schedule_worker">
-              <option value="">全員</option>
-              {workers.map((worker) => (
-                <option key={worker.id} value={worker.id}>
-                  {worker.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="check-filter">
-            <input
-              defaultChecked={showCancelledSchedules}
-              name="show_cancelled"
-              type="checkbox"
-              value="1"
-            />
-            <span>キャンセルを表示</span>
-          </label>
-          <label className="check-filter">
-            <input
-              defaultChecked={showReportedSchedules}
-              name="show_reported"
-              type="checkbox"
-              value="1"
-            />
-            <span>報告済みも表示</span>
-          </label>
-          <button className="button" type="submit">表示</button>
-        </form>
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead><tr><th>日時</th><th>区分</th><th>案件内容</th><th>作業者</th><th>状態</th><th className="numeric">売上</th><th>操作</th></tr></thead>
-            <tbody>
-              {visibleScheduleReservations.map((reservation) => {
-                const approvedReport = approvedReportFor(reservation);
-                return (
-                  <tr key={reservation.id}>
-                    <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
-                    <td>{reservation.service_categories?.name ?? "未設定"}</td>
-                    <td>
-                      <strong>{reservation.service_content}</strong>
-                      <small>{reservation.address}</small>
-                      {reservation.customer_name || reservation.customer_phone ? (
-                        <small>{[reservation.customer_name, reservation.customer_phone].filter(Boolean).join(" / ")}</small>
-                      ) : null}
-                    </td>
-                    <td>{workerNames(reservation) || "未設定"}</td>
-                    <td><span className={statusClass(reservation.status)}>{reservationLabels[reservation.status]}</span></td>
-                    <td className="numeric">{isApprovedCompleted(reservation) ? formatCurrency(Number(reservation.amount)) : "-"}</td>
-                    <td>
-                      <div className="table-actions">
-                        <Link
-                          className="icon-text-button"
-                          href={`/admin/reservations/${reservation.id}?month=${selectedMonth}`}
-                        >
-                          <Pencil size={14} />
-                          編集
-                        </Link>
-                        {approvedReport && reservation.status === "completed" ? (
-                          <form action={reopenWorkReport}>
-                            <input name="report_id" type="hidden" value={approvedReport.id} />
-                            <SubmitButton className="button" pendingLabel="戻し中...">
-                              承認待ちへ戻す
-                            </SubmitButton>
-                          </form>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {visibleScheduleReservations.length === 0 ? <tr><td colSpan={7}>表示条件に合う案件はありません</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
+        <AdminScheduleTable reservations={reservations} selectedMonth={selectedMonth} workers={workers} />
       </section>
 
       <section className="admin-section" id="expenses">
