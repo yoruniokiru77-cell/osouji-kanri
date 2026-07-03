@@ -112,11 +112,19 @@ function otaSalesShare(reservation: ReservationWithRelations) {
 export default async function AdminDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{
+    month?: string;
+    schedule_worker?: string;
+    show_cancelled?: string;
+    show_reported?: string;
+  }>;
 }) {
   const profile = await requireRole("admin");
   const params = await searchParams;
   const selectedMonth = params.month ?? new Date().toISOString().slice(0, 7);
+  const selectedScheduleWorker = params.schedule_worker ?? "";
+  const showCancelledSchedules = params.show_cancelled === "1";
+  const showReportedSchedules = params.show_reported === "1";
   const range = monthRange(selectedMonth);
   const { workers, categories, reservations, expenses } = await getCachedAdminDashboardData(
     range.start,
@@ -176,6 +184,14 @@ export default async function AdminDashboard({
     })
     .filter((item) => item.count > 0 || categories.find((category) => category.id === item.id)?.active)
     .sort((a, b) => b.sales - a.sales);
+  const visibleScheduleReservations = reservations.filter((reservation) => {
+    const matchesWorker =
+      !selectedScheduleWorker ||
+      reservation.reservation_workers.some((assignment) => assignment.worker_id === selectedScheduleWorker);
+    const matchesCancelled = showCancelledSchedules || reservation.status !== "cancelled";
+    const matchesReported = showReportedSchedules || reservation.work_reports.length === 0;
+    return matchesWorker && matchesCancelled && matchesReported;
+  });
 
   return (
     <AdminLayout displayName={profile.display_name}>
@@ -527,14 +543,47 @@ export default async function AdminDashboard({
 
       <section className="admin-section" id="schedules">
         <div className="admin-section-heading">
-          <div><CalendarDays size={19} /><span><h2>案件一覧</h2><p>予定から完了まで月単位で確認</p></span></div>
-          <strong>{reservations.length}件</strong>
+          <div><CalendarDays size={19} /><span><h2>案件一覧</h2><p>通常はキャンセル・報告済みを非表示</p></span></div>
+          <strong>{visibleScheduleReservations.length}件</strong>
         </div>
+        <form className="schedule-filter-form">
+          <input name="month" type="hidden" value={selectedMonth} />
+          <label>
+            <span>作業者</span>
+            <select defaultValue={selectedScheduleWorker} name="schedule_worker">
+              <option value="">全員</option>
+              {workers.map((worker) => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="check-filter">
+            <input
+              defaultChecked={showCancelledSchedules}
+              name="show_cancelled"
+              type="checkbox"
+              value="1"
+            />
+            <span>キャンセルを表示</span>
+          </label>
+          <label className="check-filter">
+            <input
+              defaultChecked={showReportedSchedules}
+              name="show_reported"
+              type="checkbox"
+              value="1"
+            />
+            <span>報告済みも表示</span>
+          </label>
+          <button className="button" type="submit">表示</button>
+        </form>
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead><tr><th>日時</th><th>区分</th><th>案件内容</th><th>作業者</th><th>状態</th><th className="numeric">売上</th><th>操作</th></tr></thead>
             <tbody>
-              {reservations.map((reservation) => {
+              {visibleScheduleReservations.map((reservation) => {
                 const approvedReport = approvedReportFor(reservation);
                 return (
                   <tr key={reservation.id}>
@@ -572,7 +621,7 @@ export default async function AdminDashboard({
                   </tr>
                 );
               })}
-              {reservations.length === 0 ? <tr><td colSpan={7}>この月の案件はありません</td></tr> : null}
+              {visibleScheduleReservations.length === 0 ? <tr><td colSpan={7}>表示条件に合う案件はありません</td></tr> : null}
             </tbody>
           </table>
         </div>
