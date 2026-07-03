@@ -22,6 +22,7 @@ import {
   updateExpenseStatus,
 } from "@/app/actions";
 import { AdminLayout } from "@/components/AdminLayout";
+import { AdminMonthForm } from "@/components/AdminMonthForm";
 import { AdminScheduleTable } from "@/components/AdminScheduleTable";
 import { DeleteWorkerForm } from "@/components/DeleteWorkerForm";
 import { DeleteServiceCategoryForm } from "@/components/DeleteServiceCategoryForm";
@@ -102,7 +103,7 @@ function otaSalesShare(reservation: ReservationWithRelations) {
 export default async function AdminDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; refresh?: string }>;
 }) {
   const profile = await requireRole("admin");
   const params = await searchParams;
@@ -111,6 +112,7 @@ export default async function AdminDashboard({
   const { workers, categories, reservations, expenses } = await getCachedAdminDashboardData(
     range.start,
     range.end,
+    params.refresh ?? "",
   );
   const summary = calculateSummary(reservations, expenses);
   const pendingReports = reservations.flatMap((reservation) =>
@@ -182,10 +184,7 @@ export default async function AdminDashboard({
           <p>管理ダッシュボード</p>
           <h1>{monthLabel(selectedMonth)}の運営状況</h1>
         </div>
-        <form className="admin-month-form">
-          <input defaultValue={selectedMonth} name="month" type="month" />
-          <button type="submit">表示</button>
-        </form>
+        <AdminMonthForm selectedMonth={selectedMonth} />
       </header>
 
       <section className="admin-section" id="overview">

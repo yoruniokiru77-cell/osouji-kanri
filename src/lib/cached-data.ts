@@ -212,8 +212,8 @@ export async function getCachedStaffExpenseData(staffId: string) {
   });
 }
 
-export async function getCachedAdminDashboardData(startIso: string, endIso: string) {
-  return apiGetCached(`admin-dashboard:${startIso}:${endIso}`, [CACHE_TAGS.admin, CACHE_TAGS.masters], async () => {
+export async function getCachedAdminDashboardData(startIso: string, endIso: string, cacheVersion = "") {
+  return apiGetCached(`admin-dashboard:${startIso}:${endIso}:${cacheVersion}`, [CACHE_TAGS.admin, CACHE_TAGS.masters], async () => {
     const supabase = await createClient();
     const [workersResult, categoriesResult, reservationsResult, expensesResult] = await Promise.all([
       supabase
