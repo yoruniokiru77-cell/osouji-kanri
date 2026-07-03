@@ -1050,15 +1050,13 @@ export async function reviewWorkReport(formData: FormData) {
       report_id: reportId,
     });
     if (error) throw new Error(error.message);
-  } else {
-    const { error } = await supabase
-      .from("work_reports")
-      .update({
-        approval_status: "rejected",
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq("id", reportId);
+  } else if (decision === "rejected") {
+    const { error } = await supabase.rpc("reject_work_report", {
+      report_id: reportId,
+    });
     if (error) throw new Error(error.message);
+  } else {
+    throw new Error("承認操作を確認してください");
   }
 
   revalidateAdminData();
