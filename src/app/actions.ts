@@ -915,6 +915,20 @@ export async function upsertWorkReport(formData: FormData) {
     redirectWorkReportError("担当していない予約には報告できません", reservationId);
   }
 
+  const { data: existingReport, error: existingReportError } = await supabase
+    .from("work_reports")
+    .select("approval_status")
+    .eq("reservation_id", reservationId)
+    .eq("staff_id", profile.id)
+    .maybeSingle();
+
+  if (existingReportError) {
+    redirectWorkReportError(`報告状況を確認できませんでした: ${existingReportError.message}`, reservationId);
+  }
+  if (existingReport?.approval_status === "approved") {
+    redirectWorkReportError("承認済みの報告は再提出できません。修正が必要な場合は管理者へ連絡してください", reservationId);
+  }
+
   const reportedAmount = readNumber(formData, "reported_amount");
   if (!Number.isInteger(reportedAmount) || reportedAmount <= 0) {
     redirectWorkReportError("売上金額は1円以上の整数で入力してください", reservationId);

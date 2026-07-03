@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { SubmitButton } from "@/components/SubmitButton";
 import type { ReservationStatus, Worker } from "@/lib/types";
 
+type ReportStatus = "pending" | "approved" | "rejected";
+
 type BookingOption = {
   id: string;
   scheduledAt: string;
@@ -16,6 +18,7 @@ type BookingOption = {
   address: string;
   categoryName: string | null;
   content: string;
+  reportStatus: ReportStatus | null;
   status: ReservationStatus;
   workerIds: string[];
 };
@@ -78,6 +81,7 @@ export function StaffReportForm({
   const [uploadError, setUploadError] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
   const selected = bookings.find((booking) => booking.id === selectedId);
+  const selectedIsApproved = selected?.reportStatus === "approved";
   const reportedAmount = Number(reportedAmountInput || 0);
   const customSupporterAmount = Number(customSupporterAmountInput || 0);
   const currentCashBalance = Number(currentCashBalanceInput || 0);
@@ -94,6 +98,7 @@ export function StaffReportForm({
   const cardReady = paymentMethod !== "card" || Boolean(statementUrl);
   const canSubmit =
     Boolean(selectedId) &&
+    !selectedIsApproved &&
     selectedWorkerIds.length > 0 &&
     reportedAmount > 0 &&
     (!hasSupporter ||
@@ -104,7 +109,7 @@ export function StaffReportForm({
     cashReady &&
     cardReady &&
     !uploading;
-  const canPressSubmit = Boolean(selectedId) && selectedWorkerIds.length > 0 && !uploading;
+  const canPressSubmit = Boolean(selectedId) && !selectedIsApproved && selectedWorkerIds.length > 0 && !uploading;
 
   useEffect(() => {
     setSelectedWorkerIds(
@@ -130,6 +135,11 @@ export function StaffReportForm({
     if (!selectedId) {
       event.preventDefault();
       setSubmitMessage("対象案件を選択してください。");
+      return;
+    }
+    if (selectedIsApproved) {
+      event.preventDefault();
+      setSubmitMessage("承認済みの報告は再提出できません。修正が必要な場合は管理者へ連絡してください。");
       return;
     }
     if (selectedWorkerIds.length === 0) {
@@ -208,8 +218,15 @@ export function StaffReportForm({
         >
           <option value="">案件を選択してください</option>
           {bookings.map((booking) => (
-            <option key={booking.id} value={booking.id}>
+            <option disabled={booking.reportStatus === "approved"} key={booking.id} value={booking.id}>
               {bookingLabel(booking)}
+              {booking.reportStatus === "approved"
+                ? "（承認済み）"
+                : booking.reportStatus === "rejected"
+                  ? "（差し戻し・再提出可）"
+                  : booking.reportStatus === "pending"
+                    ? "（承認待ち）"
+                    : ""}
             </option>
           ))}
         </select>
@@ -221,6 +238,9 @@ export function StaffReportForm({
             <Clock3 size={15} />
             <strong>{reportPreviewDateTimeFormatter.format(dateFromSupabase(selected.scheduledAt))}</strong>
             <span className={statusClass(selected.status)}>{reservationLabels[selected.status]}</span>
+            {selected.reportStatus === "approved" ? <span className="status green">承認済み</span> : null}
+            {selected.reportStatus === "pending" ? <span className="status blue">承認待ち</span> : null}
+            {selected.reportStatus === "rejected" ? <span className="status red">差し戻し</span> : null}
           </div>
           <p><MapPin size={15} />{selected.address}</p>
           {selected.customerName || selected.customerPhone ? (
@@ -228,6 +248,12 @@ export function StaffReportForm({
               <Users size={15} />
               {[selected.customerName, selected.customerPhone].filter(Boolean).join(" / ")}
             </p>
+          ) : null}
+          {selected.reportStatus === "approved" ? (
+            <p className="field-help">承認済みのため、スタッフ側から再提出はできません。</p>
+          ) : null}
+          {selected.reportStatus === "rejected" ? (
+            <p className="field-help">差し戻しされた報告です。内容を修正して再提出できます。</p>
           ) : null}
         </div>
       ) : null}
