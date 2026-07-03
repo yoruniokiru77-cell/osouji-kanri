@@ -29,6 +29,7 @@ import { PurchaseExpenseForm } from "@/components/PurchaseExpenseForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
 import { getCachedAdminDashboardData } from "@/lib/cached-data";
+import { formatReservationDateTime, parseReservationDate } from "@/lib/datetime";
 import { calculateSummary, formatCurrency } from "@/lib/finance";
 import { expenseLabels, reservationLabels, statusClass } from "@/lib/labels";
 import type { ReservationWithRelations } from "@/lib/types";
@@ -46,14 +47,7 @@ function monthLabel(month: string) {
 }
 
 function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    month: "numeric",
-    day: "numeric",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Tokyo",
-  }).format(new Date(value));
+  return formatReservationDateTime(value);
 }
 
 function workerNames(reservation: ReservationWithRelations) {
@@ -132,7 +126,7 @@ export default async function AdminDashboard({
   const unreportedReservations = reservations.filter(
     (reservation) =>
       reservation.status === "scheduled" &&
-      new Date(reservation.scheduled_at) < new Date() &&
+      parseReservationDate(reservation.scheduled_at) < new Date() &&
       reservation.work_reports.length === 0,
   );
   const pendingExpenses = expenses.filter((expense) => expense.status === "requested");

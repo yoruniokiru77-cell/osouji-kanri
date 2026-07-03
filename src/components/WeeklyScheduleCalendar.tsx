@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CalendarDays, ChevronRight, Clock3, MapPin, Pencil, X } from "lucide-react";
+import { formatReservationTime } from "@/lib/datetime";
 
 export type WeekBooking = {
   id: string;
@@ -114,9 +115,5 @@ export function WeeklyScheduleCalendar({ weeks }: { weeks: ScheduleWeek[] }) {
 }
 
 function formatTime(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Tokyo",
-  }).format(new Date(value));
+  return formatReservationTime(value);
 }

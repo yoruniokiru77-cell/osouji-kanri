@@ -5,6 +5,7 @@ import { ExpenseReceiptUpload } from "@/components/ExpenseReceiptUpload";
 import { StaffLayout } from "@/components/StaffLayout";
 import { requireRole } from "@/lib/auth";
 import { getCachedStaffExpenseData } from "@/lib/cached-data";
+import { parseReservationDate } from "@/lib/datetime";
 import { formatCurrency } from "@/lib/finance";
 import { expenseLabels, statusClass } from "@/lib/labels";
 import type { ReservationWithRelations } from "@/lib/types";
@@ -15,7 +16,9 @@ function isIchijoReservation(reservation: ReservationWithRelations) {
 
 function reservationOptionLabel(reservation: ReservationWithRelations) {
   return [
-    new Date(reservation.scheduled_at).toLocaleDateString("ja-JP"),
+    parseReservationDate(reservation.scheduled_at).toLocaleDateString("ja-JP", {
+      timeZone: "Asia/Tokyo",
+    }),
     reservation.customer_name || reservation.service_content,
     reservation.service_categories?.name,
   ]
@@ -60,7 +63,7 @@ export default async function StaffExpensePage({
             <h2>経費申請フォーム</h2>
             <label><span>経費項目 *</span><select name="category_id" required><option value="">項目を選択</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <label><span>金額 *</span><div className="currency-input"><b>¥</b><input min="1" name="amount" placeholder="0" required type="number" /></div></label>
-            <label><span>関連案件（任意）</span><select name="reservation_id"><option value="">案件に紐付けない</option>{reservations.map((item) => <option key={item.id} value={item.id}>{new Date(item.scheduled_at).toLocaleDateString("ja-JP")} - {item.service_content}</option>)}</select></label>
+            <label><span>関連案件（任意）</span><select name="reservation_id"><option value="">案件に紐付けない</option>{reservations.map((item) => <option key={item.id} value={item.id}>{parseReservationDate(item.scheduled_at).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })} - {item.service_content}</option>)}</select></label>
             <div>
               <span className="form-label">領収書画像</span>
               <ExpenseReceiptUpload />

@@ -5,20 +5,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { reopenWorkReport } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { formatReservationDateTime } from "@/lib/datetime";
 import { formatCurrency } from "@/lib/finance";
 import { reservationLabels, statusClass } from "@/lib/labels";
 import type { ReservationWithRelations, Worker } from "@/lib/types";
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    month: "numeric",
-    day: "numeric",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Tokyo",
-  }).format(new Date(value));
-}
 
 function workerNames(reservation: ReservationWithRelations) {
   return reservation.reservation_workers
@@ -120,7 +110,7 @@ export function AdminScheduleTable({
               const approvedReport = approvedReportFor(reservation);
               return (
                 <tr key={reservation.id}>
-                  <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
+                  <td className="nowrap">{formatReservationDateTime(reservation.scheduled_at)}</td>
                   <td>{reservation.service_categories?.name ?? "未設定"}</td>
                   <td>
                     <strong>{reservation.service_content}</strong>

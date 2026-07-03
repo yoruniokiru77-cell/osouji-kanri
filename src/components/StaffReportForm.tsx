@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Clock3, CreditCard, MapPin, Upload, Users } from "lucide-react";
 import { upsertWorkReport } from "@/app/actions";
+import { parseReservationDate } from "@/lib/datetime";
 import { reservationLabels, statusClass } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/client";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -40,13 +41,9 @@ const reportPreviewDateTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
   timeZone: "Asia/Tokyo",
 });
 
-function dateFromSupabase(value: string) {
-  return new Date(/[zZ]|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`);
-}
-
 function bookingLabel(booking: BookingOption) {
   return [
-    reportDateTimeFormatter.format(dateFromSupabase(booking.scheduledAt)),
+    reportDateTimeFormatter.format(parseReservationDate(booking.scheduledAt)),
     booking.customerName || "お客様名未入力",
     booking.categoryName || "区分未設定",
     booking.content,
@@ -236,7 +233,7 @@ export function StaffReportForm({
         <div className="glass-card booking-preview">
           <div>
             <Clock3 size={15} />
-            <strong>{reportPreviewDateTimeFormatter.format(dateFromSupabase(selected.scheduledAt))}</strong>
+            <strong>{reportPreviewDateTimeFormatter.format(parseReservationDate(selected.scheduledAt))}</strong>
             <span className={statusClass(selected.status)}>{reservationLabels[selected.status]}</span>
             {selected.reportStatus === "approved" ? <span className="status green">承認済み</span> : null}
             {selected.reportStatus === "pending" ? <span className="status blue">承認待ち</span> : null}

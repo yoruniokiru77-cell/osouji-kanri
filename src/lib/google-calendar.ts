@@ -1,3 +1,5 @@
+import { parseReservationDate } from "@/lib/datetime";
+
 type CalendarReservation = {
   address: string;
   customer_name: string | null;
@@ -40,7 +42,7 @@ function getGoogleCalendarConfig() {
 }
 
 function addMinutes(value: string, minutes: number) {
-  const date = new Date(value);
+  const date = parseReservationDate(value);
   date.setMinutes(date.getMinutes() + minutes);
   return date.toISOString();
 }
@@ -82,7 +84,7 @@ function getEventSummary(reservation: CalendarReservation) {
 
 function isSameStartTime(left: string | undefined, right: string) {
   if (!left) return false;
-  return Math.abs(new Date(left).getTime() - new Date(right).getTime()) < 60_000;
+  return Math.abs(parseReservationDate(left).getTime() - parseReservationDate(right).getTime()) < 60_000;
 }
 
 async function getAccessToken(config: NonNullable<ReturnType<typeof getGoogleCalendarConfig>>) {
@@ -193,7 +195,7 @@ async function findGoogleCalendarEventId(
   const privateMatch = privateData.items?.find((event) => event.id);
   if (privateMatch?.id) return privateMatch.id;
 
-  const start = new Date(reservation.scheduled_at);
+  const start = parseReservationDate(reservation.scheduled_at);
   const timeMin = new Date(start.getTime() - 60 * 60 * 1000).toISOString();
   const timeMax = new Date(start.getTime() + DEFAULT_EVENT_MINUTES * 60 * 1000 + 60 * 60 * 1000).toISOString();
   const response = await requestGoogleCalendar(

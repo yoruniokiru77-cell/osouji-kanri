@@ -20,6 +20,7 @@ import { StaffLayout } from "@/components/StaffLayout";
 import { WeeklyScheduleCalendar } from "@/components/WeeklyScheduleCalendar";
 import { requireRole } from "@/lib/auth";
 import { getCachedStaffDashboardData } from "@/lib/cached-data";
+import { formatReservationDateKey, formatReservationTime } from "@/lib/datetime";
 import { formatCurrency } from "@/lib/finance";
 import { expenseLabels, reservationLabels, statusClass } from "@/lib/labels";
 import type { ReservationWithRelations } from "@/lib/types";
@@ -149,7 +150,7 @@ export default async function StaffDashboard({
     reservationWindowEnd.toISOString(),
     query.created || query.deleted || query.updated || "",
   );
-  const reservationDateKey = (value: string) => dateKeyFormatter.format(new Date(value));
+  const reservationDateKey = (value: string) => formatReservationDateKey(value);
   const selectedBookings = reservations.filter(
     (item) => reservationDateKey(item.scheduled_at) === selectedDate,
   );
@@ -225,11 +226,7 @@ export default async function StaffDashboard({
                   <div className="card-row">
                     <strong className="time">
                       <Clock3 size={15} />
-                      {new Date(booking.scheduled_at).toLocaleTimeString("ja-JP", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        timeZone: "Asia/Tokyo",
-                      })}
+                      {formatReservationTime(booking.scheduled_at)}
                     </strong>
                     <div className="booking-actions">
                       <span className={statusClass(booking.status)}>

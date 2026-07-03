@@ -8,23 +8,8 @@ import { StaffLayout } from "@/components/StaffLayout";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
 import { getCachedStaffMasters } from "@/lib/cached-data";
+import { formatReservationDateKey, formatReservationDateTimeLocal } from "@/lib/datetime";
 import { createClient } from "@/lib/supabase/server";
-
-function toDateTimeLocal(value: string) {
-  const date = new Date(value);
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
-}
 
 export default async function StaffScheduleEditPage({
   params,
@@ -71,7 +56,7 @@ export default async function StaffScheduleEditPage({
   return (
     <StaffLayout title="予定を編集">
       <div className="mobile-page">
-        <Link className="back-link" href={`/staff/dashboard?date=${reservation.scheduled_at.slice(0, 10)}`}>
+        <Link className="back-link" href={`/staff/dashboard?date=${formatReservationDateKey(reservation.scheduled_at)}`}>
           <ArrowLeft size={16} />
           予定一覧へ戻る
         </Link>
@@ -92,7 +77,7 @@ export default async function StaffScheduleEditPage({
               <label>
                 <span>日時 *</span>
                 <input
-                  defaultValue={toDateTimeLocal(reservation.scheduled_at)}
+                  defaultValue={formatReservationDateTimeLocal(reservation.scheduled_at)}
                   name="scheduled_at"
                   required
                   type="datetime-local"
@@ -190,7 +175,7 @@ export default async function StaffScheduleEditPage({
             </form>
             <DeleteReservationForm
               reservationId={reservation.id}
-              scheduledDate={reservation.scheduled_at.slice(0, 10)}
+              scheduledDate={formatReservationDateKey(reservation.scheduled_at)}
             />
           </>
         )}

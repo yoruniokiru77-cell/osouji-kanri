@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile, requireRole } from "@/lib/auth";
 import { CACHE_TAGS, clearCachedData } from "@/lib/cached-data";
+import { formatReservationMonthKey } from "@/lib/datetime";
 import {
   deleteGoogleCalendarEvent,
   upsertGoogleCalendarEvent,
@@ -272,7 +273,7 @@ export async function createReservation(formData: FormData) {
   const { data: reservation, error } = await supabase
     .from("reservations")
     .insert({
-      scheduled_at: readString(formData, "scheduled_at"),
+      scheduled_at: asJstTimestamp(readString(formData, "scheduled_at")),
       customer_name: readString(formData, "customer_name") || null,
       customer_phone: readString(formData, "customer_phone") || null,
       address: readString(formData, "address"),
@@ -534,7 +535,8 @@ export async function updateAdminReservation(formData: FormData) {
   await requireRole("admin");
   const supabase = await createClient();
   const reservationId = readString(formData, "reservation_id");
-  const selectedMonth = readString(formData, "month") || readString(formData, "scheduled_at").slice(0, 7);
+  const selectedMonth =
+    readString(formData, "month") || formatReservationMonthKey(asJstTimestamp(readString(formData, "scheduled_at")));
   const workerIds = [...new Set(formData.getAll("worker_ids").map(String).filter(Boolean))];
   const serviceItems = readServiceItems(formData);
   const customToolNames = readCustomToolNames(formData);
