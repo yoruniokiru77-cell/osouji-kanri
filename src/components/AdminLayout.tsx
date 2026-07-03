@@ -1,7 +1,9 @@
 import Link from "next/link";
 import {
+  AlertTriangle,
   Banknote,
   CalendarDays,
+  CheckCircle2,
   ClipboardCheck,
   LayoutDashboard,
   ReceiptText,
@@ -13,10 +15,14 @@ import {
 import { LogoutButton } from "@/components/LogoutButton";
 
 const navigation = [
-  { href: "/admin/dashboard#overview", label: "概要", icon: LayoutDashboard },
-  { href: "/admin/dashboard#approvals", label: "実績承認", icon: ClipboardCheck },
-  { href: "/admin/dashboard#finance", label: "給与・申告", icon: Banknote },
+  { href: "/admin/dashboard#overview", label: "ダッシュボード", icon: LayoutDashboard },
+  { href: "/admin/dashboard#counts", label: "件数", icon: ClipboardCheck },
+  { href: "/admin/dashboard#today-reservations", label: "本日の案件", icon: CalendarDays },
+  { href: "/admin/dashboard#unreported", label: "未報告案件", icon: AlertTriangle },
+  { href: "/admin/dashboard#approvals", label: "承認待ち", icon: ClipboardCheck },
+  { href: "/admin/dashboard#approved-reports", label: "承認済", icon: CheckCircle2 },
   { href: "/admin/dashboard#schedules", label: "案件一覧", icon: CalendarDays },
+  { href: "/admin/dashboard#finance", label: "給料集計", icon: Banknote },
   { href: "/admin/dashboard#expenses", label: "経費", icon: ReceiptText },
   { href: "/admin/dashboard#categories", label: "区分", icon: Tags },
   { href: "/admin/dashboard#workers", label: "作業者", icon: Users },

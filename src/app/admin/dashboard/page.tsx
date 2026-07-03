@@ -29,7 +29,7 @@ import { PurchaseExpenseForm } from "@/components/PurchaseExpenseForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
 import { getCachedAdminDashboardData } from "@/lib/cached-data";
-import { formatReservationDateTime, parseReservationDate } from "@/lib/datetime";
+import { formatReservationDateKey, formatReservationDateTime, parseReservationDate } from "@/lib/datetime";
 import { calculateSummary, formatCurrency } from "@/lib/finance";
 import { expenseLabels, reservationLabels, statusClass } from "@/lib/labels";
 import type { ReservationWithRelations } from "@/lib/types";
@@ -136,6 +136,15 @@ export default async function AdminDashboard({
   const unlinkedIchijoReservations = reservations.filter(
     (reservation) => isIchijoReservation(reservation) && !linkedCleaningReservationIds.has(reservation.id),
   );
+  const todayKey = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+  }).format(new Date());
+  const todayReservations = reservations.filter(
+    (reservation) => formatReservationDateKey(reservation.scheduled_at) === todayKey,
+  );
   const completedCount = reservations.filter(isApprovedCompleted).length;
   const scheduledCount = reservations.filter((item) => item.status === "scheduled").length;
   const otaTotalSales = reservations
@@ -180,6 +189,9 @@ export default async function AdminDashboard({
       </header>
 
       <section className="admin-section" id="overview">
+        <div className="admin-section-heading">
+          <div><TrendingUp size={19} /><span><h2>ダッシュボード</h2><p>売上・給与・利益の月次サマリー</p></span></div>
+        </div>
         <div className="admin-summary-grid">
           <article className="summary-tile">
             <span className="summary-icon green"><CircleDollarSign size={20} /></span>
@@ -212,7 +224,12 @@ export default async function AdminDashboard({
             <em>全体売上から給与・外注・経費を控除</em>
           </article>
         </div>
+      </section>
 
+      <section className="admin-section" id="counts">
+        <div className="admin-section-heading">
+          <div><ClipboardCheck size={19} /><span><h2>件数</h2><p>確認が必要な件数をまとめて確認</p></span></div>
+        </div>
         <div className="attention-strip">
           <div>
             <ClipboardCheck size={18} />
@@ -247,31 +264,31 @@ export default async function AdminDashboard({
         </div>
       </section>
 
-      <section className="admin-section" id="ichijo-cleaning">
+      <section className="admin-section" id="today-reservations">
         <div className="admin-section-heading">
-          <div><ReceiptText size={19} /><span><h2>一条クリーニング領収書確認</h2><p>スタッフが領収書経費に紐づけていない一条案件を確認</p></span></div>
-          <strong>{unlinkedIchijoReservations.length}件</strong>
+          <div><CalendarDays size={19} /><span><h2>本日の案件</h2><p>今日対応する案件を確認</p></span></div>
+          <strong>{todayReservations.length}件</strong>
         </div>
-        {unlinkedIchijoReservations.length === 0 ? (
+        {todayReservations.length === 0 ? (
           <div className="admin-empty">
             <CheckCircle2 size={25} />
-            <p>未紐づけの一条案件はありません</p>
+            <p>本日の案件はありません</p>
           </div>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
-              <thead><tr><th>日時</th><th>区分</th><th>案件</th><th>作業者</th><th>状態</th></tr></thead>
+              <thead><tr><th>日時</th><th>区分</th><th>案件</th><th>作業者</th><th>住所</th><th>状態</th></tr></thead>
               <tbody>
-                {unlinkedIchijoReservations.map((reservation) => (
+                {todayReservations.map((reservation) => (
                   <tr key={reservation.id}>
                     <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
                     <td>{reservation.service_categories?.name ?? "未設定"}</td>
                     <td>
                       <strong>{reservation.customer_name || reservation.service_content}</strong>
                       <small>{reservation.service_content}</small>
-                      <small>{reservation.address}</small>
                     </td>
                     <td>{workerNames(reservation) || "未設定"}</td>
+                    <td>{reservation.address}</td>
                     <td><span className={statusClass(reservation.status)}>{reservationLabels[reservation.status]}</span></td>
                   </tr>
                 ))}
@@ -312,7 +329,7 @@ export default async function AdminDashboard({
 
       <section className="admin-section" id="approvals">
         <div className="admin-section-heading">
-          <div><ClipboardCheck size={19} /><span><h2>承認待ちの実績</h2><p>承認すると売上と給与計算へ反映されます</p></span></div>
+          <div><ClipboardCheck size={19} /><span><h2>承認待ち案件</h2><p>承認すると売上と給与計算へ反映されます</p></span></div>
           <strong>{pendingReports.length}件</strong>
         </div>
         {pendingReports.length === 0 ? (
@@ -416,7 +433,7 @@ export default async function AdminDashboard({
 
       <section className="admin-section" id="approved-reports">
         <div className="admin-section-heading">
-          <div><CheckCircle2 size={19} /><span><h2>承認済み実績</h2><p>確定売上と給与計算に反映済みの案件</p></span></div>
+          <div><CheckCircle2 size={19} /><span><h2>承認済案件</h2><p>確定売上と給与計算に反映済みの案件</p></span></div>
           <strong>{approvedReports.length}件</strong>
         </div>
         {approvedReports.length === 0 ? (
@@ -467,9 +484,13 @@ export default async function AdminDashboard({
         )}
       </section>
 
+      <section className="admin-section" id="schedules">
+        <AdminScheduleTable reservations={reservations} selectedMonth={selectedMonth} workers={workers} />
+      </section>
+
       <section className="admin-section" id="finance">
         <div className="admin-section-heading">
-          <div><Banknote size={19} /><span><h2>給与・確定申告用集計</h2><p>承認済み実績から月次の売上・給料・外注・経費を確認</p></span></div>
+          <div><Banknote size={19} /><span><h2>給料集計</h2><p>承認済み実績から月次の売上・給料・外注・経費を確認</p></span></div>
         </div>
         <div className="finance-columns">
           <article className="finance-panel">
@@ -514,8 +535,38 @@ export default async function AdminDashboard({
         </div>
       </section>
 
-      <section className="admin-section" id="schedules">
-        <AdminScheduleTable reservations={reservations} selectedMonth={selectedMonth} workers={workers} />
+      <section className="admin-section" id="ichijo-cleaning">
+        <div className="admin-section-heading">
+          <div><ReceiptText size={19} /><span><h2>一条クリーニング領収書確認</h2><p>スタッフが領収書経費に紐づけていない一条案件を確認</p></span></div>
+          <strong>{unlinkedIchijoReservations.length}件</strong>
+        </div>
+        {unlinkedIchijoReservations.length === 0 ? (
+          <div className="admin-empty">
+            <CheckCircle2 size={25} />
+            <p>未紐づけの一条案件はありません</p>
+          </div>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead><tr><th>日時</th><th>区分</th><th>案件</th><th>作業者</th><th>状態</th></tr></thead>
+              <tbody>
+                {unlinkedIchijoReservations.map((reservation) => (
+                  <tr key={reservation.id}>
+                    <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
+                    <td>{reservation.service_categories?.name ?? "未設定"}</td>
+                    <td>
+                      <strong>{reservation.customer_name || reservation.service_content}</strong>
+                      <small>{reservation.service_content}</small>
+                      <small>{reservation.address}</small>
+                    </td>
+                    <td>{workerNames(reservation) || "未設定"}</td>
+                    <td><span className={statusClass(reservation.status)}>{reservationLabels[reservation.status]}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="admin-section" id="expenses">
