@@ -198,7 +198,7 @@ export async function getCachedStaffExpenseData(staffId: string) {
       supabase
         .from("expenses")
         .select(
-          "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, expense_categories(id, name), expense_reservations(reservation_id, reservations(id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, google_calendar_event_id, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, is_supporter, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)))",
+          "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, expense_categories(id, name), expense_reservations(reservation_id, reservations(id, customer_name, service_content))",
         )
         .eq("staff_id", staffId)
         .order("created_at", { ascending: false }),
@@ -236,7 +236,7 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
       supabase
         .from("expenses")
         .select(
-          "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, profiles(id, display_name, role, commission_rate), expense_categories(id, name), expense_reservations(reservation_id, reservations(id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, google_calendar_event_id, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, is_supporter, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)))",
+          "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, profiles(id, display_name, role, commission_rate), expense_categories(id, name), expense_reservations(reservation_id, reservations(id, customer_name, service_content))",
         )
         .gte("created_at", startIso)
         .lt("created_at", endIso)

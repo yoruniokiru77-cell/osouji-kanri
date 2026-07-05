@@ -80,12 +80,21 @@ create unique index if not exists reservations_source_unique
   on public.reservations (source_system, source_key)
   where source_system is not null and source_key is not null;
 
+create index if not exists reservations_scheduled_at_idx
+  on public.reservations (scheduled_at);
+
+create index if not exists reservations_created_by_idx
+  on public.reservations (created_by);
+
 create table if not exists public.reservation_staff (
   reservation_id uuid not null references public.reservations(id) on delete cascade,
   staff_id uuid not null references public.profiles(id) on delete restrict,
   commission_rate_override numeric(5, 4),
   primary key (reservation_id, staff_id)
 );
+
+create index if not exists reservation_staff_staff_id_idx
+  on public.reservation_staff (staff_id);
 
 create table if not exists public.reservation_tools (
   reservation_id uuid not null references public.reservations(id) on delete cascade,
@@ -116,6 +125,12 @@ create table if not exists public.work_reports (
   unique (reservation_id, staff_id)
 );
 
+create index if not exists work_reports_staff_created_at_idx
+  on public.work_reports (staff_id, created_at desc);
+
+create index if not exists work_reports_approval_status_idx
+  on public.work_reports (approval_status);
+
 create table if not exists public.expenses (
   id uuid primary key default gen_random_uuid(),
   staff_id uuid not null references public.profiles(id) on delete restrict,
@@ -134,12 +149,24 @@ create table if not exists public.expenses (
   )
 );
 
+create index if not exists expenses_created_at_idx
+  on public.expenses (created_at);
+
+create index if not exists expenses_staff_created_at_idx
+  on public.expenses (staff_id, created_at desc);
+
+create index if not exists expenses_status_idx
+  on public.expenses (status);
+
 create table if not exists public.expense_reservations (
   expense_id uuid not null references public.expenses(id) on delete cascade,
   reservation_id uuid not null references public.reservations(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (expense_id, reservation_id)
 );
+
+create index if not exists expense_reservations_reservation_id_idx
+  on public.expense_reservations (reservation_id);
 
 create or replace function public.touch_updated_at()
 returns trigger
