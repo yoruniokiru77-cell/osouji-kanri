@@ -662,6 +662,9 @@ button:disabled { cursor: wait; opacity: .72; }
 .panel h2,.card h3 { margin: 0 0 14px; }.form,.field { display: grid; gap: 10px; }.field span { color: var(--muted); font-size: 12px; font-weight: 700; }
 .input,.select,.textarea { width:100%; border:1px solid var(--line); border-radius:6px; background:var(--surface-2); color:var(--text); padding:10px 11px; }.textarea{min-height:88px}
 .button { border:0; border-radius:6px; background:var(--blue); color:#fff; cursor:pointer; font-weight:700; padding:10px 14px; }.button.secondary{background:var(--surface-3)}.button.danger{background:var(--red)}
+.submit-button-pending { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.submit-button-spinner { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.38); border-top-color: #fff; border-radius: 50%; animation: submitSpin 700ms linear infinite; }
+@keyframes submitSpin { to { transform: rotate(360deg); } }
 .actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left}th{color:var(--muted)}
 .badge{display:inline-flex;border-radius:999px;background:rgba(36,189,131,.15);color:#75deb7;font-size:11px;font-weight:700;padding:4px 8px}.badge.danger{background:rgba(230,93,99,.15);color:#ff9ca1}
 .login{display:grid;place-items:center;min-height:100vh;padding:24px}.login-card{width:min(420px,100%)}

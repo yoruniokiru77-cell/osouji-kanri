@@ -197,6 +197,10 @@ function revalidateStaffData() {
   revalidatePath("/staff/expense");
 }
 
+function clearStaffDataCache() {
+  clearCachedData(CACHE_TAGS.staff);
+}
+
 function revalidateAdminData() {
   clearCachedData(CACHE_TAGS.admin);
   revalidatePath("/admin/dashboard");
@@ -1076,7 +1080,7 @@ export async function reviewWorkReport(formData: FormData) {
   }
 
   revalidateAdminData();
-  revalidateStaffData();
+  clearStaffDataCache();
 }
 
 export async function reopenWorkReport(formData: FormData) {
@@ -1090,7 +1094,7 @@ export async function reopenWorkReport(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidateAdminData();
-  revalidateStaffData();
+  clearStaffDataCache();
 }
 
 export async function createExpense(formData: FormData) {
