@@ -129,7 +129,9 @@ export default async function AdminDashboard({
     (reservation) =>
       reservation.status === "scheduled" &&
       parseReservationDate(reservation.scheduled_at) < new Date() &&
-      reservation.work_reports.length === 0,
+      !reservation.work_reports.some(
+        (report) => report.approval_status === "pending" || report.approval_status === "approved",
+      ),
   );
   const pendingExpenses = expenses.filter((expense) => expense.status === "requested");
   const linkedCleaningReservationIds = new Set(
@@ -299,7 +301,7 @@ export default async function AdminDashboard({
 
       <section className="admin-section" id="unreported">
         <div className="admin-section-heading">
-          <div><AlertTriangle size={19} /><span><h2>未報告案件</h2><p>作業日を過ぎても実績報告がない案件</p></span></div>
+          <div><AlertTriangle size={19} /><span><h2>未報告案件</h2><p>作業日を過ぎても報告がない、または差し戻し中の案件</p></span></div>
           <strong>{unreportedReservations.length}件</strong>
         </div>
         {unreportedReservations.length === 0 ? (
