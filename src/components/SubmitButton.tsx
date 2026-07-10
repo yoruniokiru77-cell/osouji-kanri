@@ -29,7 +29,7 @@ export function SubmitButton({
     <button
       aria-busy={busy}
       className={className}
-      disabled={disabled || busy}
+      disabled={disabled || pending}
       onClick={() => setClicked(true)}
       type="submit"
     >
