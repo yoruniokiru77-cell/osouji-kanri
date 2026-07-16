@@ -1103,6 +1103,7 @@ export async function createExpense(formData: FormData) {
   const supabase = await createClient();
 
   const amount = readNumber(formData, "amount");
+  const selectedMonth = readString(formData, "selected_month");
   const linkedReservationIds = [
     ...new Set(formData.getAll("linked_reservation_ids").map(String).filter(Boolean)),
   ];
@@ -1122,6 +1123,8 @@ export async function createExpense(formData: FormData) {
       throw new Error("経費を紐づける案件を確認できませんでした");
     }
     createdAt = reservation.scheduled_at;
+  } else if (profile.role === "admin" && /^\d{4}-\d{2}$/.test(selectedMonth)) {
+    createdAt = `${selectedMonth}-01T00:00:00+09:00`;
   }
 
   const { data: expense, error } = await supabase
@@ -1163,8 +1166,8 @@ export async function createExpense(formData: FormData) {
   revalidateStaffData();
   revalidateAdminData();
   if (profile.role === "admin") {
-    const returnTo = readString(formData, "return_to") || "/admin/dashboard#expenses";
-    redirect(returnTo);
+    const monthParam = /^\d{4}-\d{2}$/.test(selectedMonth) ? `month=${selectedMonth}&` : "";
+    redirect(`/admin/dashboard?${monthParam}refresh=${Date.now()}#expenses`);
   }
   redirect("/staff/expense?success=1");
 }

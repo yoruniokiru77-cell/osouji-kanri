@@ -598,7 +598,7 @@ export default async function AdminDashboard({
           <span>却下 <strong>{rejectedExpenses.length}</strong>件</span>
         </div>
         <form action={createExpense} className="master-create-form expense-create-form">
-          <input name="return_to" type="hidden" value={`/admin/dashboard?month=${selectedMonth}&refresh=${Date.now()}#expenses`} />
+          <input name="selected_month" type="hidden" value={selectedMonth} />
           <label>
             <span>経費項目</span>
             <select name="category_id" required>
