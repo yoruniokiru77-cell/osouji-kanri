@@ -1,9 +1,22 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 export function AdminMonthForm({ selectedMonth }: { selectedMonth: string }) {
+  const router = useRouter();
   const refreshInputRef = useRef<HTMLInputElement>(null);
+  const refreshedOnMountRef = useRef(false);
+
+  useEffect(() => {
+    if (refreshedOnMountRef.current) return;
+    refreshedOnMountRef.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    params.set("month", selectedMonth);
+    params.set("refresh", String(Date.now()));
+    router.replace(`/admin/dashboard?${params.toString()}`, { scroll: false });
+  }, [router, selectedMonth]);
 
   return (
     <form

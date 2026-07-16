@@ -31,7 +31,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
 import { getCachedAdminDashboardData } from "@/lib/cached-data";
 import { formatReservationDateKey, formatReservationDateTime, parseReservationDate } from "@/lib/datetime";
-import { calculateSummary, formatCurrency } from "@/lib/finance";
+import { calculateSummary, formatCurrency, isOwnerStaffName } from "@/lib/finance";
 import { expenseLabels, reservationLabels, statusClass } from "@/lib/labels";
 import type { ReservationWithRelations } from "@/lib/types";
 
@@ -160,7 +160,7 @@ export default async function AdminDashboard({
   const totalContractorAndSupportCosts = summary.totalContractorCosts;
   const taxSummaryRows = [
     { label: "全体売上", value: summary.totalSales },
-    { label: "太田給料", value: otaPayroll },
+    { label: "給与控除額（オーナー除外）", value: summary.deductiblePayroll },
     { label: "外注・応援費", value: totalContractorAndSupportCosts },
     { label: "購入済み経費", value: summary.purchasedExpenses },
     { label: "申告用利益", value: summary.netProfit },
@@ -222,7 +222,7 @@ export default async function AdminDashboard({
           <article className="summary-tile profit">
             <span className="summary-icon green"><TrendingUp size={20} /></span>
             <div><small>申告用利益</small><strong>{formatCurrency(summary.netProfit)}</strong></div>
-            <em>全体売上から給与・外注・経費を控除</em>
+            <em>オーナー給与を除く給与・外注・経費を控除</em>
           </article>
         </div>
       </section>
@@ -499,7 +499,10 @@ export default async function AdminDashboard({
             <div className="finance-row highlight"><span>太田売上合計</span><strong>{formatCurrency(otaTotalSales)}</strong></div>
             <div className="finance-row highlight"><span>太田給料</span><strong>{formatCurrency(otaPayroll)}</strong></div>
             {summary.payroll.map((item) => (
-              <div className="finance-row" key={item.staffName}><span>{item.staffName}</span><strong>{formatCurrency(item.amount)}</strong></div>
+              <div className="finance-row" key={item.staffName}>
+                <span>{item.staffName}{isOwnerStaffName(item.staffName) ? "（利益控除外）" : ""}</span>
+                <strong>{formatCurrency(item.amount)}</strong>
+              </div>
             ))}
             {summary.payroll.length === 0 ? <p className="muted">給与データはありません</p> : null}
           </article>
@@ -513,6 +516,9 @@ export default async function AdminDashboard({
         </div>
         <div className="tax-summary">
           <h3><ReceiptText size={17} />確定申告用の月次内訳</h3>
+          <p className="muted">
+            申告用利益 ＝ 全体売上 − 給与控除額（坂場・雨谷を除く）− 外注・応援費 − 購入済み経費
+          </p>
           <div className="tax-summary-grid">
             {taxSummaryRows.map((row) => (
               <article key={row.label}>

@@ -1,5 +1,11 @@
 import type { Expense, ReservationWithRelations } from "@/lib/types";
 
+const OWNER_NAME_PARTS = ["坂場", "雨谷"];
+
+export function isOwnerStaffName(name: string) {
+  return OWNER_NAME_PARTS.some((ownerName) => name.includes(ownerName));
+}
+
 function hasApprovedReport(reservation: ReservationWithRelations) {
   return reservation.work_reports?.some((report) => report.approval_status === "approved") ?? false;
 }
@@ -111,6 +117,9 @@ export function calculateSummary(
   const totalSales = completedReservations.reduce((sum, item) => sum + Number(item.amount), 0);
   const payroll = calculatePayroll(reservations);
   const totalPayroll = payroll.reduce((sum, item) => sum + item.amount, 0);
+  const deductiblePayroll = payroll
+    .filter((item) => !isOwnerStaffName(item.staffName))
+    .reduce((sum, item) => sum + item.amount, 0);
   const contractorCosts = calculateContractorCosts(reservations);
   const totalContractorCosts = contractorCosts.reduce((sum, item) => sum + item.amount, 0);
   const purchasedExpenses = expenses
@@ -120,9 +129,10 @@ export function calculateSummary(
   return {
     totalSales,
     totalPayroll,
+    deductiblePayroll,
     totalContractorCosts,
     purchasedExpenses,
-    netProfit: totalSales - (totalPayroll + totalContractorCosts + purchasedExpenses),
+    netProfit: totalSales - (deductiblePayroll + totalContractorCosts + purchasedExpenses),
     payroll,
     contractorCosts,
   };
