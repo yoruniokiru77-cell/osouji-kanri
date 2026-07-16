@@ -916,15 +916,6 @@ button:disabled { cursor: wait; opacity: .72; }
 .approval-report p { margin: 5px 0 0; font-size: 11px; line-height: 1.55; }
 .payment-review { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 12px; margin-top: 9px; color: var(--muted); font-size: 9px; }
 .payment-review a { color: #8eb8ff; font-weight: 800; }
-.approval-expense { margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line); }
-.approval-expense summary { display: flex; align-items: center; gap: 6px; color: #8eb8ff; cursor: pointer; font-size: 10px; font-weight: 800; }
-.approval-expense form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 10px; padding: 11px; background: rgba(255,255,255,.025); border-radius: 6px; }
-.approval-expense label, .approval-expense-receipt { display: grid; gap: 5px; color: var(--muted); font-size: 9px; font-weight: 700; }
-.approval-expense input, .approval-expense select { width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: 6px; background: #1b1f29; color: var(--text); padding: 0 10px; outline: none; }
-.approval-expense .currency-input input { padding-left: 28px; }
-.approval-expense-note, .approval-expense-receipt { grid-column: 1 / -1; }
-.approval-expense .receipt-upload-panel { font-weight: 400; }
-.approval-expense .button { justify-self: start; min-height: 34px; font-size: 10px; }
 .warning-text { display: flex; gap: 5px; color: #ffc766; }
 .approval-side {
   min-width: 0;
@@ -1121,6 +1112,7 @@ button:disabled { cursor: wait; opacity: .72; }
 .master-create-form label { display: grid; gap: 5px; }
 .master-create-form label span { color: var(--muted); font-size: 9px; font-weight: 800; }
 .master-create-form input,
+.master-create-form select,
 .inline-edit-form input,
 .inline-edit-form select,
 .worker-row-form input,
@@ -1134,7 +1126,10 @@ button:disabled { cursor: wait; opacity: .72; }
   color: var(--text);
   padding: 0 8px;
 }
-.master-create-form input { height: 38px; }
+.master-create-form input, .master-create-form select { height: 38px; }
+.expense-create-form { grid-template-columns: minmax(150px, 1fr) 140px minmax(220px, 1.5fr) minmax(180px, 1fr) minmax(180px, 1fr) auto; }
+.expense-create-receipt { display: grid; gap: 5px; }
+.expense-create-receipt .receipt-upload-panel { min-height: 38px; }
 .inline-edit-form { display: grid; grid-template-columns: minmax(140px, 1fr) 82px 34px; gap: 6px; }
 .table-icon-button {
   width: 34px;

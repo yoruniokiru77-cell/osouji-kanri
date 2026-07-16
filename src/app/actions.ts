@@ -1098,7 +1098,8 @@ export async function reopenWorkReport(formData: FormData) {
 }
 
 export async function createExpense(formData: FormData) {
-  const profile = await requireRole("staff");
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
   const supabase = await createClient();
 
   const amount = readNumber(formData, "amount");
@@ -1110,6 +1111,19 @@ export async function createExpense(formData: FormData) {
   }
 
   const primaryReservationId = linkedReservationIds[0] || readString(formData, "reservation_id") || null;
+  let createdAt: string | null = null;
+  if (primaryReservationId && profile.role === "admin") {
+    const { data: reservation, error: reservationError } = await supabase
+      .from("reservations")
+      .select("scheduled_at")
+      .eq("id", primaryReservationId)
+      .single();
+    if (reservationError || !reservation) {
+      throw new Error("経費を紐づける案件を確認できませんでした");
+    }
+    createdAt = reservation.scheduled_at;
+  }
+
   const { data: expense, error } = await supabase
     .from("expenses")
     .insert({
@@ -1119,7 +1133,10 @@ export async function createExpense(formData: FormData) {
       amount,
       note: readString(formData, "note") || null,
       receipt_url: readString(formData, "receipt_url") || null,
-      status: "requested",
+      status: profile.role === "admin" ? "approved" : "requested",
+      reviewed_at: profile.role === "admin" ? new Date().toISOString() : null,
+      reviewed_by: profile.role === "admin" ? profile.id : null,
+      ...(createdAt ? { created_at: createdAt } : {}),
     })
     .select("id")
     .single();
@@ -1140,69 +1157,11 @@ export async function createExpense(formData: FormData) {
 
   revalidateStaffData();
   revalidateAdminData();
+  if (profile.role === "admin") {
+    const returnTo = readString(formData, "return_to") || "/admin/dashboard#expenses";
+    redirect(returnTo);
+  }
   redirect("/staff/expense?success=1");
-}
-
-export async function createApprovedExpenseFromReport(formData: FormData) {
-  const admin = await requireRole("admin");
-  const supabase = await createClient();
-  const reportId = readString(formData, "report_id");
-  const reservationId = readString(formData, "reservation_id");
-  const amount = readNumber(formData, "amount");
-
-  if (!Number.isInteger(amount) || amount <= 0) {
-    throw new Error("金額は1円以上の整数で入力してください");
-  }
-
-  const { data: report, error: reportError } = await supabase
-    .from("work_reports")
-    .select("staff_id, reservation_id, approval_status")
-    .eq("id", reportId)
-    .eq("reservation_id", reservationId)
-    .single();
-
-  if (reportError || !report || report.approval_status !== "pending") {
-    throw new Error("承認待ちの実績報告を確認できませんでした");
-  }
-
-  const { data: reservation, error: reservationError } = await supabase
-    .from("reservations")
-    .select("scheduled_at")
-    .eq("id", reservationId)
-    .single();
-  if (reservationError || !reservation) {
-    throw new Error("経費を紐づける案件を確認できませんでした");
-  }
-
-  const { data: expense, error } = await supabase
-    .from("expenses")
-    .insert({
-      staff_id: report.staff_id,
-      category_id: readString(formData, "category_id"),
-      reservation_id: reservationId,
-      amount,
-      note: readString(formData, "note") || null,
-      receipt_url: readString(formData, "receipt_url") || null,
-      status: "approved",
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: admin.id,
-      created_at: reservation.scheduled_at,
-    })
-    .select("id")
-    .single();
-
-  if (error || !expense) {
-    throw new Error(error?.message ?? "経費を登録できませんでした");
-  }
-
-  const { error: linkError } = await supabase.from("expense_reservations").insert({
-    expense_id: expense.id,
-    reservation_id: reservationId,
-  });
-  if (linkError) throw new Error(linkError.message);
-
-  revalidateAdminData();
-  clearStaffDataCache();
 }
 
 export async function updateExpenseStatus(formData: FormData) {

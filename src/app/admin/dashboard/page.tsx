@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import {
-  createApprovedExpenseFromReport,
+  createExpense,
   reopenWorkReport,
   reviewWorkReport,
   saveServiceCategory,
@@ -375,35 +375,6 @@ export default async function AdminDashboard({
                       </span>
                     ) : null}
                   </div>
-                  <details className="approval-expense">
-                    <summary><ReceiptText size={13} />この案件の経費を登録</summary>
-                    <form action={createApprovedExpenseFromReport}>
-                      <input name="report_id" type="hidden" value={report.id} />
-                      <input name="reservation_id" type="hidden" value={reservation.id} />
-                      <label>
-                        <span>経費項目</span>
-                        <select name="category_id" required>
-                          <option value="">選択してください</option>
-                          {expenseCategories.map((category) => (
-                            <option key={category.id} value={category.id}>{category.name}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span>金額</span>
-                        <div className="currency-input"><b>¥</b><input min="1" name="amount" required type="number" /></div>
-                      </label>
-                      <label className="approval-expense-note">
-                        <span>メモ</span>
-                        <input name="note" placeholder="経費の内容" />
-                      </label>
-                      <div className="approval-expense-receipt">
-                        <span>領収書（任意）</span>
-                        <ExpenseReceiptUpload />
-                      </div>
-                      <SubmitButton className="button" pendingLabel="登録中...">承認済み経費として登録</SubmitButton>
-                    </form>
-                  </details>
                 </div>
                 <div className="approval-side">
                   <span><Users size={13} />{workerNames(reservation) || "担当未設定"}</span>
@@ -612,6 +583,42 @@ export default async function AdminDashboard({
           <div><ReceiptText size={19} /><span><h2>経費管理</h2><p>申請の承認と領収書付き購入処理</p></span></div>
           <strong>{expenses.length}件</strong>
         </div>
+        <form action={createExpense} className="master-create-form expense-create-form">
+          <input name="return_to" type="hidden" value={`/admin/dashboard?month=${selectedMonth}&refresh=${Date.now()}#expenses`} />
+          <label>
+            <span>経費項目</span>
+            <select name="category_id" required>
+              <option value="">項目を選択</option>
+              {expenseCategories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>金額</span>
+            <div className="currency-input"><b>¥</b><input min="1" name="amount" placeholder="0" required type="number" /></div>
+          </label>
+          <label>
+            <span>関連案件</span>
+            <select name="reservation_id">
+              <option value="">案件に紐付けない</option>
+              {reservations.map((reservation) => (
+                <option key={reservation.id} value={reservation.id}>
+                  {formatReservationDateKey(reservation.scheduled_at)} - {reservation.customer_name || reservation.service_content}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>メモ</span>
+            <input name="note" placeholder="経費の内容" />
+          </label>
+          <div className="expense-create-receipt">
+            <span className="form-label">領収書</span>
+            <ExpenseReceiptUpload />
+          </div>
+          <SubmitButton className="button" pendingLabel="登録中...">承認済み経費として登録</SubmitButton>
+        </form>
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead><tr><th>申請日</th><th>申請者・項目</th><th>状態</th><th className="numeric">金額</th><th>操作</th></tr></thead>
