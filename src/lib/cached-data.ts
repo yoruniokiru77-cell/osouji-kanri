@@ -215,7 +215,7 @@ export async function getCachedStaffExpenseData(staffId: string) {
 export async function getCachedAdminDashboardData(startIso: string, endIso: string, cacheVersion = "") {
   return apiGetCached(`admin-dashboard:${startIso}:${endIso}:${cacheVersion}`, [CACHE_TAGS.admin, CACHE_TAGS.masters], async () => {
     const supabase = await createClient();
-    const [workersResult, categoriesResult, reservationsResult, expensesResult] = await Promise.all([
+    const [workersResult, categoriesResult, expenseCategoriesResult, reservationsResult, expensesResult] = await Promise.all([
       supabase
         .from("workers")
         .select("id, name, worker_type, default_compensation_type, default_compensation_value, active")
@@ -225,6 +225,7 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
         .from("service_categories")
         .select("id, name, active")
         .order("name"),
+      supabase.from("expense_categories").select("id, name").order("name"),
       supabase
         .from("reservations")
         .select(
@@ -245,6 +246,7 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
 
     return {
       categories: (categoriesResult.data ?? []) as ServiceCategory[],
+      expenseCategories: (expenseCategoriesResult.data ?? []) as ExpenseCategory[],
       expenses: (expensesResult.data ?? []) as unknown as Expense[],
       reservations: (reservationsResult.data ?? []) as unknown as ReservationWithRelations[],
       workers: (workersResult.data ?? []) as Worker[],

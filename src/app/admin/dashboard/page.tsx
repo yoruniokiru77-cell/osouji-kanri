@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import {
+  createApprovedExpenseFromReport,
   reopenWorkReport,
   reviewWorkReport,
   saveServiceCategory,
@@ -26,6 +27,7 @@ import { AdminMonthForm } from "@/components/AdminMonthForm";
 import { AdminScheduleTable } from "@/components/AdminScheduleTable";
 import { DeleteWorkerForm } from "@/components/DeleteWorkerForm";
 import { DeleteServiceCategoryForm } from "@/components/DeleteServiceCategoryForm";
+import { ExpenseReceiptUpload } from "@/components/ExpenseReceiptUpload";
 import { PurchaseExpenseForm } from "@/components/PurchaseExpenseForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireRole } from "@/lib/auth";
@@ -109,7 +111,7 @@ export default async function AdminDashboard({
   const params = await searchParams;
   const selectedMonth = params.month ?? new Date().toISOString().slice(0, 7);
   const range = monthRange(selectedMonth);
-  const { workers, categories, reservations, expenses } = await getCachedAdminDashboardData(
+  const { workers, categories, expenseCategories, reservations, expenses } = await getCachedAdminDashboardData(
     range.start,
     range.end,
     params.refresh ?? "",
@@ -373,6 +375,35 @@ export default async function AdminDashboard({
                       </span>
                     ) : null}
                   </div>
+                  <details className="approval-expense">
+                    <summary><ReceiptText size={13} />この案件の経費を登録</summary>
+                    <form action={createApprovedExpenseFromReport}>
+                      <input name="report_id" type="hidden" value={report.id} />
+                      <input name="reservation_id" type="hidden" value={reservation.id} />
+                      <label>
+                        <span>経費項目</span>
+                        <select name="category_id" required>
+                          <option value="">選択してください</option>
+                          {expenseCategories.map((category) => (
+                            <option key={category.id} value={category.id}>{category.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>金額</span>
+                        <div className="currency-input"><b>¥</b><input min="1" name="amount" required type="number" /></div>
+                      </label>
+                      <label className="approval-expense-note">
+                        <span>メモ</span>
+                        <input name="note" placeholder="経費の内容" />
+                      </label>
+                      <div className="approval-expense-receipt">
+                        <span>領収書（任意）</span>
+                        <ExpenseReceiptUpload />
+                      </div>
+                      <SubmitButton className="button" pendingLabel="登録中...">承認済み経費として登録</SubmitButton>
+                    </form>
+                  </details>
                 </div>
                 <div className="approval-side">
                   <span><Users size={13} />{workerNames(reservation) || "担当未設定"}</span>
