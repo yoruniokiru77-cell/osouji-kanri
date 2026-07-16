@@ -1127,6 +1127,7 @@ button:disabled { cursor: wait; opacity: .72; }
   padding: 0 8px;
 }
 .master-create-form input, .master-create-form select { height: 38px; }
+.master-create-form .currency-input input { padding-left: 28px; }
 .expense-create-form { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .expense-create-form .button { min-height: 38px; align-self: end; }
 .expense-create-receipt { display: grid; gap: 5px; }
