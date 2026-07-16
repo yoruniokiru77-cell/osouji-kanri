@@ -136,6 +136,9 @@ export default async function AdminDashboard({
       ),
   );
   const pendingExpenses = expenses.filter((expense) => expense.status === "requested");
+  const approvedExpenses = expenses.filter((expense) => expense.status === "approved");
+  const purchasedExpenses = expenses.filter((expense) => expense.status === "purchased");
+  const rejectedExpenses = expenses.filter((expense) => expense.status === "rejected");
   const linkedCleaningReservationIds = new Set(
     expenses.flatMap((expense) => expense.expense_reservations?.map((link) => link.reservation_id) ?? []),
   );
@@ -253,6 +256,11 @@ export default async function AdminDashboard({
             <ReceiptText size={18} />
             <span>経費承認待ち</span>
             <strong>{pendingExpenses.length}件</strong>
+          </div>
+          <div>
+            <CheckCircle2 size={18} />
+            <span>承認済み経費</span>
+            <strong>{approvedExpenses.length}件</strong>
           </div>
           <div>
             <AlertTriangle size={18} />
@@ -582,6 +590,12 @@ export default async function AdminDashboard({
         <div className="admin-section-heading">
           <div><ReceiptText size={19} /><span><h2>経費管理</h2><p>申請の承認と領収書付き購入処理</p></span></div>
           <strong>{expenses.length}件</strong>
+        </div>
+        <div className="expense-status-summary">
+          <span>承認待ち <strong>{pendingExpenses.length}</strong>件</span>
+          <span>承認済み <strong>{approvedExpenses.length}</strong>件</span>
+          <span>購入済み <strong>{purchasedExpenses.length}</strong>件</span>
+          <span>却下 <strong>{rejectedExpenses.length}</strong>件</span>
         </div>
         <form action={createExpense} className="master-create-form expense-create-form">
           <input name="return_to" type="hidden" value={`/admin/dashboard?month=${selectedMonth}&refresh=${Date.now()}#expenses`} />

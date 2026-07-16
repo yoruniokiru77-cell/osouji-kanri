@@ -1145,9 +1145,14 @@ export async function createExpense(formData: FormData) {
     throw new Error(error?.message ?? "経費申請を保存できませんでした");
   }
 
-  if (linkedReservationIds.length > 0) {
+  const reservationLinkIds = linkedReservationIds.length > 0
+    ? linkedReservationIds
+    : primaryReservationId
+      ? [primaryReservationId]
+      : [];
+  if (reservationLinkIds.length > 0) {
     const { error: linkError } = await supabase.from("expense_reservations").insert(
-      linkedReservationIds.map((reservationId) => ({
+      reservationLinkIds.map((reservationId) => ({
         expense_id: expense.id,
         reservation_id: reservationId,
       })),

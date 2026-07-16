@@ -1128,6 +1128,9 @@ button:disabled { cursor: wait; opacity: .72; }
 }
 .master-create-form input, .master-create-form select { height: 38px; }
 .master-create-form .currency-input input { padding-left: 28px; }
+.expense-status-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.expense-status-summary span { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.025); font-size: 10px; font-weight: 800; }
+.expense-status-summary strong { color: var(--text); font-size: 12px; }
 .expense-create-form { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .expense-create-form .button { min-height: 38px; align-self: end; }
 .expense-create-receipt { display: grid; gap: 5px; }
