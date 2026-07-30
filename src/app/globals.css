@@ -798,6 +798,16 @@ button:disabled { cursor: wait; opacity: .72; }
 .summary-tile small, .summary-tile em { color: var(--muted); font-size: 10px; font-style: normal; }
 .summary-tile strong { overflow-wrap: anywhere; font-size: 20px; }
 .summary-tile > em { grid-column: 1 / -1; align-self: end; }
+.payment-sales-panel { margin-top: 11px; padding: 13px; border: 1px solid var(--line); border-radius: 8px; background: #181b24; }
+.payment-sales-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.payment-sales-heading span { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; font-weight: 800; }
+.payment-sales-heading svg { color: #76a9ff; }
+.payment-sales-heading strong { font-size: 15px; }
+.payment-sales-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.payment-sales-grid article { min-height: 68px; display: grid; align-content: center; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.02); }
+.payment-sales-grid span { color: var(--muted); font-size: 9px; }
+.payment-sales-grid strong { font-size: 15px; }
+.payment-sales-grid small { color: #76a9ff; font-size: 9px; }
 .attention-strip {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -1236,6 +1246,7 @@ button:disabled { cursor: wait; opacity: .72; }
 
 @media (max-width: 1050px) {
   .admin-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .payment-sales-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tax-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .category-sales-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .worker-create-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1251,7 +1262,7 @@ button:disabled { cursor: wait; opacity: .72; }
   .admin-user { display: none; }
   .admin-main { padding: 20px 14px 50px; }
   .admin-topbar { align-items: flex-start; flex-direction: column; }
-  .admin-summary-grid, .attention-strip, .finance-columns, .tax-summary-grid, .worker-grid { grid-template-columns: 1fr; }
+  .admin-summary-grid, .attention-strip, .finance-columns, .payment-sales-grid, .tax-summary-grid, .worker-grid { grid-template-columns: 1fr; }
   .attention-strip > div + div { border-left: 0; border-top: 1px solid var(--line); }
   .approval-item { grid-template-columns: 1fr; }
   .approval-side { justify-items: start; padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--line); }

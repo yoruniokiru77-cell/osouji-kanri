@@ -64,6 +64,10 @@ function paymentLabel(method: string) {
   return { cash: "現金", card: "カード", invoice: "請求書", other: "その他" }[method] ?? method;
 }
 
+function approvedPaymentMethod(reservation: ReservationWithRelations) {
+  return reservation.work_reports.find((report) => report.approval_status === "approved")?.payment_method ?? "other";
+}
+
 function parseReceiptUrls(value: string | null) {
   if (!value) return [];
   try {
@@ -163,6 +167,16 @@ export default async function AdminDashboard({
     .filter((item) => isOtaWorkerName(item.staffName))
     .reduce((sum, item) => sum + item.amount, 0);
   const totalContractorAndSupportCosts = summary.totalContractorCosts;
+  const paymentSalesRows = (["cash", "card", "invoice", "other"] as const).map((method) => {
+    const methodReservations = reservations.filter(
+      (reservation) => isApprovedCompleted(reservation) && approvedPaymentMethod(reservation) === method,
+    );
+    return {
+      amount: methodReservations.reduce((sum, reservation) => sum + Number(reservation.amount), 0),
+      count: methodReservations.length,
+      method,
+    };
+  });
   const taxSummaryRows = [
     { label: "全体売上", value: summary.totalSales },
     { label: "給与控除額（オーナー除外）", value: summary.deductiblePayroll },
@@ -229,6 +243,21 @@ export default async function AdminDashboard({
             <div><small>申告用利益</small><strong>{formatCurrency(summary.netProfit)}</strong></div>
             <em>オーナー給与を除く給与・外注・経費を控除</em>
           </article>
+        </div>
+        <div className="payment-sales-panel">
+          <div className="payment-sales-heading">
+            <span><Banknote size={17} />支払い区分別収入</span>
+            <strong>{formatCurrency(summary.totalSales)}</strong>
+          </div>
+          <div className="payment-sales-grid">
+            {paymentSalesRows.map((row) => (
+              <article key={row.method}>
+                <span>{paymentLabel(row.method)}</span>
+                <strong>{formatCurrency(row.amount)}</strong>
+                <small>{row.count}件</small>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
