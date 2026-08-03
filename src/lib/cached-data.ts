@@ -80,6 +80,18 @@ function reservationIsInRange(reservation: ReservationWithRelations, startIso: s
   return scheduledAt >= new Date(startIso).getTime() && scheduledAt < new Date(endIso).getTime();
 }
 
+function reservationsWithReportsByStatus(
+  reservations: ReservationWithRelations[],
+  approvalStatus: WorkReport["approval_status"],
+) {
+  return reservations
+    .map((reservation) => ({
+      ...reservation,
+      work_reports: reservation.work_reports.filter((report) => report.approval_status === approvalStatus),
+    }))
+    .filter((reservation) => reservation.work_reports.length > 0);
+}
+
 function expenseIsInRange(expense: Expense, startIso: string, endIso: string) {
   const start = new Date(startIso).getTime();
   const end = new Date(endIso).getTime();
@@ -323,12 +335,22 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
     ]);
 
     const baseReservations = (reservationsResult.data ?? []) as unknown as ReservationWithRelations[];
-    const pendingReportReservations = reportRowsToReservations(
+    const directPendingReservations = reportRowsToReservations(
       (pendingReportsResult.data ?? []) as unknown as ReportWithReservation[],
     ).filter((reservation) => reservationIsInRange(reservation, startIso, endIso));
-    const approvedReservations = reportRowsToReservations(
+    const embeddedPendingReservations = reservationsWithReportsByStatus(baseReservations, "pending");
+    const pendingReportReservations = mergeReservationsById(
+      embeddedPendingReservations,
+      directPendingReservations,
+    );
+    const directApprovedReservations = reportRowsToReservations(
       (approvedReportsResult.data ?? []) as unknown as ReportWithReservation[],
     ).filter((reservation) => reservationIsInRange(reservation, startIso, endIso));
+    const embeddedApprovedReservations = reservationsWithReportsByStatus(baseReservations, "approved");
+    const approvedReservations = mergeReservationsById(
+      embeddedApprovedReservations,
+      directApprovedReservations,
+    );
     const monthlyReservations = mergeReservationsById(
       baseReservations,
       approvedReservations,
