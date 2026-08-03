@@ -75,6 +75,11 @@ function mergeReservationsById(
   return Array.from(merged.values());
 }
 
+function reservationIsInRange(reservation: ReservationWithRelations, startIso: string, endIso: string) {
+  const scheduledAt = new Date(reservation.scheduled_at).getTime();
+  return scheduledAt >= new Date(startIso).getTime() && scheduledAt < new Date(endIso).getTime();
+}
+
 async function apiGetCached<T>(key: string, tags: string[], loader: () => Promise<T>) {
   const now = Date.now();
   const cached = apiCache.get(key) as CacheEntry<T> | undefined;
@@ -284,15 +289,11 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
         .from("work_reports")
         .select(reportReservationSelect)
         .eq("approval_status", "pending")
-        .gte("reservations.scheduled_at", startIso)
-        .lt("reservations.scheduled_at", endIso)
         .order("created_at", { ascending: false }),
       supabase
         .from("work_reports")
         .select(reportReservationSelect)
         .eq("approval_status", "approved")
-        .gte("reservations.scheduled_at", startIso)
-        .lt("reservations.scheduled_at", endIso)
         .order("created_at", { ascending: false }),
       supabase
         .from("expenses")
@@ -304,11 +305,15 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
         .order("created_at", { ascending: false }),
     ]);
 
+    const baseReservations = (reservationsResult.data ?? []) as unknown as ReservationWithRelations[];
+    const pendingReportReservations = reportRowsToReservations(
+      (pendingReportsResult.data ?? []) as unknown as ReportWithReservation[],
+    ).filter((reservation) => reservationIsInRange(reservation, startIso, endIso));
     const approvedReservations = reportRowsToReservations(
       (approvedReportsResult.data ?? []) as unknown as ReportWithReservation[],
-    );
+    ).filter((reservation) => reservationIsInRange(reservation, startIso, endIso));
     const monthlyReservations = mergeReservationsById(
-      (reservationsResult.data ?? []) as unknown as ReservationWithRelations[],
+      baseReservations,
       approvedReservations,
     );
 
@@ -316,9 +321,7 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
       categories: (categoriesResult.data ?? []) as ServiceCategory[],
       expenseCategories: (expenseCategoriesResult.data ?? []) as ExpenseCategory[],
       expenses: (expensesResult.data ?? []) as unknown as Expense[],
-      pendingReservations: reportRowsToReservations(
-        (pendingReportsResult.data ?? []) as unknown as ReportWithReservation[],
-      ),
+      pendingReservations: pendingReportReservations,
       reservations: monthlyReservations,
       workers: (workersResult.data ?? []) as Worker[],
     };
