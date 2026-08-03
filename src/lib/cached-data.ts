@@ -8,6 +8,7 @@ import type {
   ServiceContentTool,
   Tool,
   Worker,
+  WorkReport,
 } from "@/lib/types";
 
 export const CACHE_TAGS = {
@@ -215,7 +216,11 @@ export async function getCachedStaffExpenseData(staffId: string) {
 export async function getCachedAdminDashboardData(startIso: string, endIso: string, cacheVersion = "") {
   return apiGetCached(`admin-dashboard:${startIso}:${endIso}:${cacheVersion}`, [CACHE_TAGS.admin, CACHE_TAGS.masters], async () => {
     const supabase = await createClient();
-    const [workersResult, categoriesResult, expenseCategoriesResult, reservationsResult, expensesResult] = await Promise.all([
+    const reservationSelect =
+      "id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, is_supporter, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)";
+    const reportReservationSelect =
+      "*, reservations(id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, is_supporter, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)))";
+    const [workersResult, categoriesResult, expenseCategoriesResult, reservationsResult, pendingReportsResult, expensesResult] = await Promise.all([
       supabase
         .from("workers")
         .select("id, name, worker_type, default_compensation_type, default_compensation_value, active")
@@ -228,12 +233,15 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
       supabase.from("expense_categories").select("id, name").order("name"),
       supabase
         .from("reservations")
-        .select(
-          "id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, is_supporter, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)",
-        )
+        .select(reservationSelect)
         .gte("scheduled_at", startIso)
         .lt("scheduled_at", endIso)
         .order("scheduled_at"),
+      supabase
+        .from("work_reports")
+        .select(reportReservationSelect)
+        .eq("approval_status", "pending")
+        .order("created_at", { ascending: false }),
       supabase
         .from("expenses")
         .select(
@@ -248,6 +256,17 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
       categories: (categoriesResult.data ?? []) as ServiceCategory[],
       expenseCategories: (expenseCategoriesResult.data ?? []) as ExpenseCategory[],
       expenses: (expensesResult.data ?? []) as unknown as Expense[],
+      pendingReservations: ((pendingReportsResult.data ?? []) as unknown as (WorkReport & {
+        reservations: Omit<ReservationWithRelations, "work_reports"> | null;
+      })[])
+        .filter((report) => report.reservations)
+        .map((report) => {
+          const { reservations, ...workReport } = report;
+          return {
+            ...reservations!,
+            work_reports: [workReport as WorkReport],
+          } as ReservationWithRelations;
+        }),
       reservations: (reservationsResult.data ?? []) as unknown as ReservationWithRelations[],
       workers: (workersResult.data ?? []) as Worker[],
     };

@@ -153,13 +153,13 @@ export default async function AdminDashboard({
   const params = await searchParams;
   const selectedMonth = params.month ?? new Date().toISOString().slice(0, 7);
   const range = monthRange(selectedMonth);
-  const { workers, categories, expenseCategories, reservations, expenses } = await getCachedAdminDashboardData(
+  const { workers, categories, expenseCategories, reservations, pendingReservations, expenses } = await getCachedAdminDashboardData(
     range.start,
     range.end,
     params.refresh ?? "",
   );
   const summary = calculateSummary(reservations, expenses);
-  const pendingReports = reservations.flatMap((reservation) =>
+  const pendingReports = pendingReservations.flatMap((reservation) =>
     reservation.work_reports
       .filter((report) => report.approval_status === "pending")
       .map((report) => ({ reservation, report })),
