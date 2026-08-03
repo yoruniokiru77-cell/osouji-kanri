@@ -32,6 +32,49 @@ const globalCache = globalThis as typeof globalThis & {
 const apiCache = globalCache.__osoujiApiCache ?? new Map<string, CacheEntry<unknown>>();
 globalCache.__osoujiApiCache = apiCache;
 
+type ReportWithReservation = WorkReport & {
+  reservations: Omit<ReservationWithRelations, "work_reports"> | null;
+};
+
+function reportRowsToReservations(rows: ReportWithReservation[]) {
+  return rows
+    .filter((report) => report.reservations)
+    .map((report) => {
+      const { reservations, ...workReport } = report;
+      return {
+        ...reservations!,
+        work_reports: [workReport as WorkReport],
+      } as ReservationWithRelations;
+    });
+}
+
+function mergeReservationsById(
+  reservations: ReservationWithRelations[],
+  reportReservations: ReservationWithRelations[],
+) {
+  const merged = new Map(reservations.map((reservation) => [reservation.id, reservation]));
+
+  for (const reportReservation of reportReservations) {
+    const existing = merged.get(reportReservation.id);
+    if (!existing) {
+      merged.set(reportReservation.id, reportReservation);
+      continue;
+    }
+
+    const reportsById = new Map(existing.work_reports.map((report) => [report.id, report]));
+    for (const report of reportReservation.work_reports) {
+      reportsById.set(report.id, report);
+    }
+    merged.set(reportReservation.id, {
+      ...existing,
+      ...reportReservation,
+      work_reports: Array.from(reportsById.values()),
+    });
+  }
+
+  return Array.from(merged.values());
+}
+
 async function apiGetCached<T>(key: string, tags: string[], loader: () => Promise<T>) {
   const now = Date.now();
   const cached = apiCache.get(key) as CacheEntry<T> | undefined;
@@ -219,8 +262,8 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
     const reservationSelect =
       "id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, is_supporter, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)), work_reports(*)";
     const reportReservationSelect =
-      "*, reservations(id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, is_supporter, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)))";
-    const [workersResult, categoriesResult, expenseCategoriesResult, reservationsResult, pendingReportsResult, expensesResult] = await Promise.all([
+      "*, reservations!inner(id, scheduled_at, customer_name, customer_phone, address, amount, service_content, service_category_id, parking_available, parking_notes, notes, status, service_categories(id, name, active), reservation_staff(staff_id, profiles(id, display_name, role, commission_rate)), reservation_workers(worker_id, compensation_type, compensation_value, is_supporter, workers(id, name, worker_type, default_compensation_type, default_compensation_value, active)), reservation_tools(tools(id, name)))";
+    const [workersResult, categoriesResult, expenseCategoriesResult, reservationsResult, pendingReportsResult, approvedReportsResult, expensesResult] = await Promise.all([
       supabase
         .from("workers")
         .select("id, name, worker_type, default_compensation_type, default_compensation_value, active")
@@ -243,6 +286,13 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
         .eq("approval_status", "pending")
         .order("created_at", { ascending: false }),
       supabase
+        .from("work_reports")
+        .select(reportReservationSelect)
+        .eq("approval_status", "approved")
+        .gte("reservations.scheduled_at", startIso)
+        .lt("reservations.scheduled_at", endIso)
+        .order("created_at", { ascending: false }),
+      supabase
         .from("expenses")
         .select(
           "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, profiles(id, display_name, role, commission_rate), expense_categories(id, name), expense_reservations(reservation_id, reservations(id, customer_name, service_content))",
@@ -252,22 +302,22 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
         .order("created_at", { ascending: false }),
     ]);
 
+    const approvedReservations = reportRowsToReservations(
+      (approvedReportsResult.data ?? []) as unknown as ReportWithReservation[],
+    );
+    const monthlyReservations = mergeReservationsById(
+      (reservationsResult.data ?? []) as unknown as ReservationWithRelations[],
+      approvedReservations,
+    );
+
     return {
       categories: (categoriesResult.data ?? []) as ServiceCategory[],
       expenseCategories: (expenseCategoriesResult.data ?? []) as ExpenseCategory[],
       expenses: (expensesResult.data ?? []) as unknown as Expense[],
-      pendingReservations: ((pendingReportsResult.data ?? []) as unknown as (WorkReport & {
-        reservations: Omit<ReservationWithRelations, "work_reports"> | null;
-      })[])
-        .filter((report) => report.reservations)
-        .map((report) => {
-          const { reservations, ...workReport } = report;
-          return {
-            ...reservations!,
-            work_reports: [workReport as WorkReport],
-          } as ReservationWithRelations;
-        }),
-      reservations: (reservationsResult.data ?? []) as unknown as ReservationWithRelations[],
+      pendingReservations: reportRowsToReservations(
+        (pendingReportsResult.data ?? []) as unknown as ReportWithReservation[],
+      ),
+      reservations: monthlyReservations,
       workers: (workersResult.data ?? []) as Worker[],
     };
   });
