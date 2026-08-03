@@ -284,6 +284,8 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
         .from("work_reports")
         .select(reportReservationSelect)
         .eq("approval_status", "pending")
+        .gte("reservations.scheduled_at", startIso)
+        .lt("reservations.scheduled_at", endIso)
         .order("created_at", { ascending: false }),
       supabase
         .from("work_reports")
