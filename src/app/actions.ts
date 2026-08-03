@@ -990,7 +990,7 @@ export async function upsertWorkReport(formData: FormData) {
 
   const { data: reservationForReport, error: reservationForReportError } = await supabase
     .from("reservations")
-    .select("customer_name, customer_phone, address, service_content")
+    .select("customer_name, customer_phone, address, service_content, service_categories(name)")
     .eq("id", reservationId)
     .single();
   if (reservationForReportError || !reservationForReport) {
@@ -1008,6 +1008,13 @@ export async function upsertWorkReport(formData: FormData) {
     reservationOriginalSnapshot,
     reservationReportedSnapshot,
   );
+  const brandPhotoUrls = readString(formData, "brand_photo_urls") || null;
+  const reservationCategoryName = String(
+    ((currentReservationForReport as { service_categories?: { name?: string | null } | null }).service_categories?.name) ?? "",
+  );
+  if (reservationCategoryName.includes("ブランド") && parseUrlList(brandPhotoUrls).length === 0) {
+    redirectWorkReportError("ブランド案件は写真を1枚以上添付してください", reservationId);
+  }
 
   const { error: workerError } = await supabase.rpc("replace_own_reservation_workers", {
     target_custom_supporters: customSupporters,
@@ -1035,6 +1042,7 @@ export async function upsertWorkReport(formData: FormData) {
       current_cash_balance: paymentMethod === "cash" ? currentCashBalance : null,
       change_amount: paymentMethod === "cash" ? changeAmount : null,
       cash_collected_amount: paymentMethod === "cash" ? cashCollectedAmount : null,
+      brand_photo_urls: brandPhotoUrls,
       reservation_original_snapshot: hasReservationChanges ? reservationOriginalSnapshot : null,
       reservation_reported_changes: hasReservationChanges ? reservationReportedSnapshot : null,
       approval_status: "pending",

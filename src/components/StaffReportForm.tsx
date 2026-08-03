@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Clock3, CreditCard, MapPin, Upload, Users } from "lucide-react";
 import { upsertWorkReport } from "@/app/actions";
+import { BrandPhotoUpload } from "@/components/BrandPhotoUpload";
 import { parseReservationDate } from "@/lib/datetime";
 import { reservationLabels, statusClass } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/client";
@@ -78,11 +79,13 @@ export function StaffReportForm({
   const [currentCashBalanceInput, setCurrentCashBalanceInput] = useState("");
   const [cashCollectedAmountInput, setCashCollectedAmountInput] = useState("");
   const [statementUrl, setStatementUrl] = useState("");
+  const [brandPhotoValue, setBrandPhotoValue] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
   const selected = bookings.find((booking) => booking.id === selectedId);
   const selectedIsApproved = selected?.reportStatus === "approved";
+  const selectedIsBrand = Boolean(selected?.categoryName?.includes("ブランド"));
   const reportedAmount = Number(reportedAmountInput || 0);
   const customSupporterAmount = Number(customSupporterAmountInput || 0);
   const currentCashBalance = Number(currentCashBalanceInput || 0);
@@ -97,6 +100,7 @@ export function StaffReportForm({
       cashCollectedAmount >= 0 &&
       nextChangeAmount >= 0);
   const cardReady = paymentMethod !== "card" || Boolean(statementUrl);
+  const brandPhotoReady = !selectedIsBrand || Boolean(brandPhotoValue);
   const canSubmit =
     Boolean(selectedId) &&
     !selectedIsApproved &&
@@ -109,6 +113,7 @@ export function StaffReportForm({
         customSupporterAmount > 0)) &&
     cashReady &&
     cardReady &&
+    brandPhotoReady &&
     !uploading;
   const canPressSubmit = Boolean(selectedId) && !selectedIsApproved && selectedWorkerIds.length > 0 && !uploading;
 
@@ -125,6 +130,7 @@ export function StaffReportForm({
     setReportedCustomerPhone(nextBooking?.customerPhone ?? "");
     setReportedAddress(nextBooking?.address ?? "");
     setReportedServiceContent(nextBooking?.content ?? "");
+    setBrandPhotoValue("");
   }, [bookings, selectedId]);
 
   const reconciliationLabel = useMemo(() => {
@@ -172,6 +178,13 @@ export function StaffReportForm({
     if (paymentMethod === "card" && !statementUrl) {
       event.preventDefault();
       setSubmitMessage("カード決済の場合は、カード明細画像を添付してください。");
+      return;
+    }
+    const brandPhotos = String(new FormData(event.currentTarget).get("brand_photo_urls") ?? "");
+    setBrandPhotoValue(brandPhotos);
+    if (selectedIsBrand && !brandPhotos) {
+      event.preventDefault();
+      setSubmitMessage("ブランド案件は写真を1枚以上添付してください。");
       return;
     }
     if (paymentMethod === "cash" && !cashReady) {
@@ -303,6 +316,14 @@ export function StaffReportForm({
               />
             </label>
           </div>
+        </fieldset>
+      ) : null}
+
+      {selectedIsBrand && selected ? (
+        <fieldset className="tool-fieldset brand-photo-fieldset">
+          <legend>ブランド案件写真 *</legend>
+          <p className="field-help">ブランド案件は作業写真を添付してください。管理者画面で確認できます。</p>
+          <BrandPhotoUpload reservationId={selected.id} />
         </fieldset>
       ) : null}
 
@@ -528,6 +549,8 @@ export function StaffReportForm({
             ? "現金の場合は、管理者へ渡す金額を現在の残高以下で入力してください。"
             : paymentMethod === "card" && !cardReady
               ? "カードの場合は、明細画像を添付すると送信できます。"
+              : selectedIsBrand && !brandPhotoReady
+                ? "ブランド案件は写真を添付すると送信できます。"
               : "必須項目を入力してください。"}
         </p>
       ) : null}

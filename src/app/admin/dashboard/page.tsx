@@ -402,6 +402,7 @@ export default async function AdminDashboard({
           <div className="approval-list">
             {pendingReports.map(({ reservation, report }) => {
               const changeRows = reservationChangeRows(report);
+              const brandPhotoUrls = parseReceiptUrls(report.brand_photo_urls);
               return (
               <article className="approval-item" key={report.id}>
                 <div className="approval-main">
@@ -447,6 +448,16 @@ export default async function AdminDashboard({
                       </span>
                     ) : null}
                   </div>
+                  {brandPhotoUrls.length > 0 ? (
+                    <div className="brand-photo-review">
+                      <span>ブランド案件写真</span>
+                      <div>
+                        {brandPhotoUrls.map((url, index) => (
+                          <a href={url} key={url} rel="noreferrer" target="_blank">写真{index + 1}</a>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="approval-side">
                   <span><Users size={13} />{workerNames(reservation) || "担当未設定"}</span>
@@ -534,6 +545,7 @@ export default async function AdminDashboard({
               <tbody>
                 {approvedReports.map(({ reservation, report }) => {
                   const changeRows = reservationChangeRows(report);
+                  const brandPhotoUrls = parseReceiptUrls(report.brand_photo_urls);
                   return (
                   <tr key={report.id}>
                     <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
@@ -543,6 +555,16 @@ export default async function AdminDashboard({
                       <small>{reservation.service_content}</small>
                       <small>{reservation.address}</small>
                       {changeRows.length > 0 ? <small className="change-trace">内容修正あり</small> : null}
+                      {brandPhotoUrls.length > 0 ? (
+                        <small className="inline-links">
+                          ブランド写真:{" "}
+                          {brandPhotoUrls.map((url, index) => (
+                            <a className="text-link" href={url} key={url} rel="noreferrer" target="_blank">
+                              写真{index + 1}
+                            </a>
+                          ))}
+                        </small>
+                      ) : null}
                     </td>
                     <td>{workerNames(reservation) || "未設定"}</td>
                     <td>{paymentLabel(report.payment_method)}</td>

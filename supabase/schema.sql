@@ -117,6 +117,7 @@ create table if not exists public.work_reports (
   previous_change_amount numeric(12, 0),
   change_amount numeric(12, 0),
   cash_collected_amount numeric(12, 0),
+  brand_photo_urls text,
   reservation_original_snapshot jsonb,
   reservation_reported_changes jsonb,
   approval_status public.report_approval_status not null default 'pending',
@@ -502,6 +503,10 @@ insert into storage.buckets (id, name, public)
 values ('receipts', 'receipts', true)
 on conflict (id) do update set public = excluded.public;
 
+insert into storage.buckets (id, name, public)
+values ('brand-photos', 'brand-photos', true)
+on conflict (id) do update set public = excluded.public;
+
 drop policy if exists "authenticated users can read receipts" on storage.objects;
 create policy "authenticated users can read receipts"
 on storage.objects for select
@@ -540,6 +545,34 @@ using (
 )
 with check (
   bucket_id = 'receipts'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "authenticated users can read brand photos" on storage.objects;
+create policy "authenticated users can read brand photos"
+on storage.objects for select
+to authenticated
+using (bucket_id = 'brand-photos');
+
+drop policy if exists "staff upload own brand photos" on storage.objects;
+create policy "staff upload own brand photos"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'brand-photos'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "staff update own brand photos" on storage.objects;
+create policy "staff update own brand photos"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'brand-photos'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'brand-photos'
   and (storage.foldername(name))[1] = auth.uid()::text
 );
 

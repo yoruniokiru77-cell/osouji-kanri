@@ -648,6 +648,7 @@ button:disabled { cursor: wait; opacity: .72; }
 .expense-card small a + a, .inline-links a + a { margin-left: 8px; }
 .expense-card > div:last-child { display: grid; justify-items: end; gap: 6px; white-space: nowrap; font-size: 12px; }
 .receipt-upload-panel { display: grid; gap: 8px; }
+.brand-photo-fieldset, .brand-photo-upload { display: grid; gap: 8px; }
 .receipt-preview-list { display: flex; flex-wrap: wrap; gap: 7px; }
 .receipt-preview-list span { display: inline-flex; align-items: center; gap: 6px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.035); font-size: 11px; }
 .receipt-preview-list button { border: 0; background: transparent; color: #ff8c98; font-size: 10px; font-weight: 800; cursor: pointer; }
@@ -937,6 +938,10 @@ button:disabled { cursor: wait; opacity: .72; }
 .admin-table td small.change-trace { display: inline-flex; width: fit-content; margin-top: 5px; padding: 3px 7px; border-radius: 999px; color: #ffc766; background: rgba(243,174,53,.12); font-weight: 800; }
 .payment-review { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 12px; margin-top: 9px; color: var(--muted); font-size: 9px; }
 .payment-review a { color: #8eb8ff; font-weight: 800; }
+.brand-photo-review { display: grid; gap: 6px; margin-top: 9px; padding: 9px 10px; border: 1px solid rgba(118,169,255,.25); border-radius: 6px; background: rgba(118,169,255,.06); }
+.brand-photo-review > span { color: #8eb8ff; font-size: 9px; font-weight: 800; }
+.brand-photo-review div { display: flex; flex-wrap: wrap; gap: 8px; }
+.brand-photo-review a { color: #d7e6ff; font-size: 10px; font-weight: 800; }
 .warning-text { display: flex; gap: 5px; color: #ffc766; }
 .approval-side {
   min-width: 0;

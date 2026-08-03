@@ -108,6 +108,7 @@ export type WorkReport = {
   current_cash_balance: number | null;
   change_amount: number | null;
   cash_collected_amount: number | null;
+  brand_photo_urls: string | null;
   reservation_original_snapshot: ReservationReportSnapshot | null;
   reservation_reported_changes: ReservationReportSnapshot | null;
   approval_status: "pending" | "approved" | "rejected";
