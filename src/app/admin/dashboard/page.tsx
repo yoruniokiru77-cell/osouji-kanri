@@ -60,6 +60,23 @@ function workerNames(reservation: ReservationWithRelations) {
     .join("、");
 }
 
+function normalWorkerNames(reservation: ReservationWithRelations) {
+  return reservation.reservation_workers
+    .filter((item) => !item.is_supporter)
+    .map((item) => item.workers?.name)
+    .filter(Boolean)
+    .join("、");
+}
+
+function supporterAssignments(reservation: ReservationWithRelations) {
+  return reservation.reservation_workers.filter((item) => item.is_supporter && item.workers);
+}
+
+function supporterAmountLabel(assignment: ReservationWithRelations["reservation_workers"][number]) {
+  const amount = assignment.compensation_value ?? assignment.workers?.default_compensation_value ?? 0;
+  return formatCurrency(Number(amount));
+}
+
 function paymentLabel(method: string) {
   return { cash: "現金", card: "カード", invoice: "請求書", other: "その他" }[method] ?? method;
 }
@@ -403,6 +420,8 @@ export default async function AdminDashboard({
             {pendingReports.map(({ reservation, report }) => {
               const changeRows = reservationChangeRows(report);
               const brandPhotoUrls = parseReceiptUrls(report.brand_photo_urls);
+              const normalNames = normalWorkerNames(reservation);
+              const supporters = supporterAssignments(reservation);
               return (
               <article className="approval-item" key={report.id}>
                 <div className="approval-main">
@@ -421,6 +440,24 @@ export default async function AdminDashboard({
                     <span>完了報告</span>
                     <p>{report.report_text}</p>
                     {report.issues ? <p className="warning-text"><AlertTriangle size={14} />{report.issues}</p> : null}
+                  </div>
+                  <div className="worker-review">
+                    <p><Users size={13} /><b>通常作業者</b>{normalNames || "未設定"}</p>
+                    <p>
+                      <Users size={13} /><b>応援者</b>
+                      {supporters.length > 0 ? (
+                        <span className="supporter-pill-list">
+                          {supporters.map((assignment) => (
+                            <span className="supporter-pill" key={assignment.worker_id}>
+                              {assignment.workers?.name}
+                              <small>{supporterAmountLabel(assignment)}</small>
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        "なし"
+                      )}
+                    </p>
                   </div>
                   {changeRows.length > 0 ? (
                     <div className="reservation-change-report">
@@ -460,7 +497,7 @@ export default async function AdminDashboard({
                   ) : null}
                 </div>
                 <div className="approval-side">
-                  <span><Users size={13} />{workerNames(reservation) || "担当未設定"}</span>
+                  <span><Users size={13} />{normalNames || "担当未設定"}</span>
                   <div className="approval-actions">
                     <form action={reviewWorkReport} className="approval-amount-form">
                       <input name="report_id" type="hidden" value={report.id} />
@@ -480,7 +517,10 @@ export default async function AdminDashboard({
                         </span>
                       </label>
                       <fieldset>
-                        <legend>作業者</legend>
+                        <legend>通常作業者</legend>
+                        {supporters.length > 0 ? (
+                          <small className="field-help">応援者は上の表示内容を保持します</small>
+                        ) : null}
                         <div className="approval-worker-options">
                           {workers.filter((worker) => worker.active).map((worker) => (
                             <label key={worker.id}>
