@@ -582,6 +582,10 @@ button:disabled { cursor: wait; opacity: .72; }
 .worker-options label > span { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: 1; }
 .worker-options strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .worker-options small { flex: 0 0 auto; color: var(--muted); background: rgba(255,255,255,.05); border-radius: 999px; padding: 2px 7px; font-size: 9px; }
+.report-reservation-edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.report-reservation-edit-grid label { display: grid; gap: 6px; }
+.report-reservation-edit-grid label:nth-child(3),
+.report-reservation-edit-grid label:nth-child(4) { grid-column: 1 / -1; }
 .work-items-fieldset { display: grid; gap: 10px; }
 .work-item-list { display: grid; gap: 10px; }
 .work-item-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px 42px; gap: 8px; align-items: end; }
@@ -924,6 +928,13 @@ button:disabled { cursor: wait; opacity: .72; }
 .approval-report { margin-top: 11px; padding: 10px 11px; background: rgba(255,255,255,.025); border-radius: 5px; }
 .approval-report > span { color: #76a9ff; font-size: 9px; font-weight: 800; }
 .approval-report p { margin: 5px 0 0; font-size: 11px; line-height: 1.55; }
+.reservation-change-report { display: grid; gap: 8px; margin-top: 10px; padding: 10px 11px; border: 1px solid rgba(243,174,53,.28); border-radius: 6px; background: rgba(243,174,53,.07); }
+.reservation-change-report > span { display: inline-flex; align-items: center; gap: 5px; color: #ffc766; font-size: 9px; font-weight: 800; }
+.reservation-change-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: start; }
+.reservation-change-row small { color: var(--muted); font-size: 9px; font-weight: 800; }
+.reservation-change-row p { margin: 0; overflow-wrap: anywhere; color: var(--text); font-size: 10px; line-height: 1.45; }
+.reservation-change-row b { display: inline-block; margin-right: 5px; color: var(--muted); font-size: 9px; }
+.admin-table td small.change-trace { display: inline-flex; width: fit-content; margin-top: 5px; padding: 3px 7px; border-radius: 999px; color: #ffc766; background: rgba(243,174,53,.12); font-weight: 800; }
 .payment-review { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 12px; margin-top: 9px; color: var(--muted); font-size: 9px; }
 .payment-review a { color: #8eb8ff; font-weight: 800; }
 .warning-text { display: flex; gap: 5px; color: #ffc766; }
@@ -1265,6 +1276,7 @@ button:disabled { cursor: wait; opacity: .72; }
   .admin-summary-grid, .attention-strip, .finance-columns, .payment-sales-grid, .tax-summary-grid, .worker-grid { grid-template-columns: 1fr; }
   .attention-strip > div + div { border-left: 0; border-top: 1px solid var(--line); }
   .approval-item { grid-template-columns: 1fr; }
+  .report-reservation-edit-grid, .reservation-change-row { grid-template-columns: 1fr; }
   .approval-side { justify-items: start; padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--line); }
   .category-sales-grid { grid-template-columns: 1fr; }
   .worker-edit-form { grid-template-columns: 1fr; }

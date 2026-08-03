@@ -117,6 +117,8 @@ create table if not exists public.work_reports (
   previous_change_amount numeric(12, 0),
   change_amount numeric(12, 0),
   cash_collected_amount numeric(12, 0),
+  reservation_original_snapshot jsonb,
+  reservation_reported_changes jsonb,
   approval_status public.report_approval_status not null default 'pending',
   reviewed_at timestamptz,
   reviewed_by uuid references public.profiles(id) on delete set null,
@@ -579,7 +581,11 @@ begin
 
   update public.reservations
   set amount = final_amount,
-      status = 'completed'
+      status = 'completed',
+      customer_name = coalesce(target_report.reservation_reported_changes->>'customer_name', customer_name),
+      customer_phone = coalesce(target_report.reservation_reported_changes->>'customer_phone', customer_phone),
+      address = coalesce(target_report.reservation_reported_changes->>'address', address),
+      service_content = coalesce(target_report.reservation_reported_changes->>'service_content', service_content)
   where id = target_report.reservation_id;
 end;
 $$;

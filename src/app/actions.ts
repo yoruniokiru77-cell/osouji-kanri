@@ -19,6 +19,32 @@ function readNumber(formData: FormData, key: string) {
   return Number(readString(formData, key));
 }
 
+function normalizeNullableText(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim();
+  return normalized === "" ? null : normalized;
+}
+
+function reservationReportSnapshot(values: {
+  address?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  service_content?: string | null;
+}) {
+  return {
+    address: normalizeNullableText(values.address),
+    customer_name: normalizeNullableText(values.customer_name),
+    customer_phone: normalizeNullableText(values.customer_phone),
+    service_content: normalizeNullableText(values.service_content),
+  };
+}
+
+function hasReservationReportChanges(
+  original: ReturnType<typeof reservationReportSnapshot>,
+  reported: ReturnType<typeof reservationReportSnapshot>,
+) {
+  return (Object.keys(original) as (keyof typeof original)[]).some((key) => original[key] !== reported[key]);
+}
+
 function parseUrlList(value: string | null | undefined) {
   if (!value) return [];
   try {
@@ -962,6 +988,27 @@ export async function upsertWorkReport(formData: FormData) {
     changeAmount = currentCashBalance - cashCollectedAmount;
   }
 
+  const { data: reservationForReport, error: reservationForReportError } = await supabase
+    .from("reservations")
+    .select("customer_name, customer_phone, address, service_content")
+    .eq("id", reservationId)
+    .single();
+  if (reservationForReportError || !reservationForReport) {
+    redirectWorkReportError("案件内容を確認できませんでした", reservationId);
+  }
+  const currentReservationForReport = reservationForReport!;
+  const reservationOriginalSnapshot = reservationReportSnapshot(currentReservationForReport);
+  const reservationReportedSnapshot = reservationReportSnapshot({
+    address: readString(formData, "reservation_address"),
+    customer_name: readString(formData, "reservation_customer_name"),
+    customer_phone: readString(formData, "reservation_customer_phone"),
+    service_content: readString(formData, "reservation_service_content"),
+  });
+  const hasReservationChanges = hasReservationReportChanges(
+    reservationOriginalSnapshot,
+    reservationReportedSnapshot,
+  );
+
   const { error: workerError } = await supabase.rpc("replace_own_reservation_workers", {
     target_custom_supporters: customSupporters,
     target_reservation_id: reservationId,
@@ -988,6 +1035,8 @@ export async function upsertWorkReport(formData: FormData) {
       current_cash_balance: paymentMethod === "cash" ? currentCashBalance : null,
       change_amount: paymentMethod === "cash" ? changeAmount : null,
       cash_collected_amount: paymentMethod === "cash" ? cashCollectedAmount : null,
+      reservation_original_snapshot: hasReservationChanges ? reservationOriginalSnapshot : null,
+      reservation_reported_changes: hasReservationChanges ? reservationReportedSnapshot : null,
       approval_status: "pending",
       reviewed_at: null,
       reviewed_by: null,

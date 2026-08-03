@@ -69,6 +69,10 @@ export function StaffReportForm({
   const [supporterWorkerIds, setSupporterWorkerIds] = useState<string[]>([]);
   const [customSupporterName, setCustomSupporterName] = useState("");
   const [customSupporterAmountInput, setCustomSupporterAmountInput] = useState("");
+  const [reportedCustomerName, setReportedCustomerName] = useState("");
+  const [reportedCustomerPhone, setReportedCustomerPhone] = useState("");
+  const [reportedAddress, setReportedAddress] = useState("");
+  const [reportedServiceContent, setReportedServiceContent] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [reportedAmountInput, setReportedAmountInput] = useState("");
   const [currentCashBalanceInput, setCurrentCashBalanceInput] = useState("");
@@ -116,6 +120,11 @@ export function StaffReportForm({
     setSupporterWorkerIds([]);
     setCustomSupporterName("");
     setCustomSupporterAmountInput("");
+    const nextBooking = bookings.find((booking) => booking.id === selectedId);
+    setReportedCustomerName(nextBooking?.customerName ?? "");
+    setReportedCustomerPhone(nextBooking?.customerPhone ?? "");
+    setReportedAddress(nextBooking?.address ?? "");
+    setReportedServiceContent(nextBooking?.content ?? "");
   }, [bookings, selectedId]);
 
   const reconciliationLabel = useMemo(() => {
@@ -253,6 +262,48 @@ export function StaffReportForm({
             <p className="field-help">差し戻しされた報告です。内容を修正して再提出できます。</p>
           ) : null}
         </div>
+      ) : null}
+
+      {selected ? (
+        <fieldset className="tool-fieldset">
+          <legend>実際の案件内容</legend>
+          <p className="field-help">予定内容と違った場合はここで修正してください。変更箇所は管理者画面に表示されます。</p>
+          <div className="report-reservation-edit-grid">
+            <label>
+              <span>お客様名</span>
+              <input
+                name="reservation_customer_name"
+                onChange={(event) => setReportedCustomerName(event.target.value)}
+                value={reportedCustomerName}
+              />
+            </label>
+            <label>
+              <span>電話番号</span>
+              <input
+                name="reservation_customer_phone"
+                onChange={(event) => setReportedCustomerPhone(event.target.value)}
+                value={reportedCustomerPhone}
+              />
+            </label>
+            <label>
+              <span>住所</span>
+              <input
+                name="reservation_address"
+                onChange={(event) => setReportedAddress(event.target.value)}
+                value={reportedAddress}
+              />
+            </label>
+            <label>
+              <span>作業内容</span>
+              <textarea
+                name="reservation_service_content"
+                onChange={(event) => setReportedServiceContent(event.target.value)}
+                rows={3}
+                value={reportedServiceContent}
+              />
+            </label>
+          </div>
+        </fieldset>
       ) : null}
 
       {selected ? (

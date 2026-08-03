@@ -35,7 +35,7 @@ import { getCachedAdminDashboardData } from "@/lib/cached-data";
 import { formatReservationDateKey, formatReservationDateTime, parseReservationDate } from "@/lib/datetime";
 import { calculateSummary, formatCurrency, isOwnerStaffName } from "@/lib/finance";
 import { expenseLabels, reservationLabels, statusClass } from "@/lib/labels";
-import type { ReservationWithRelations } from "@/lib/types";
+import type { ReservationReportSnapshot, ReservationWithRelations, WorkReport } from "@/lib/types";
 
 function monthRange(month: string) {
   const start = new Date(`${month}-01T00:00:00+09:00`);
@@ -76,6 +76,27 @@ function parseReceiptUrls(value: string | null) {
   } catch {
     return [value];
   }
+}
+
+const reservationChangeLabels: Record<keyof ReservationReportSnapshot, string> = {
+  address: "住所",
+  customer_name: "お客様名",
+  customer_phone: "電話番号",
+  service_content: "作業内容",
+};
+
+function reservationChangeRows(report: WorkReport) {
+  const original = report.reservation_original_snapshot;
+  const reported = report.reservation_reported_changes;
+  if (!original || !reported) return [];
+  return (Object.keys(reservationChangeLabels) as (keyof ReservationReportSnapshot)[])
+    .filter((key) => (original[key] ?? "") !== (reported[key] ?? ""))
+    .map((key) => ({
+      after: reported[key] || "未入力",
+      before: original[key] || "未入力",
+      key,
+      label: reservationChangeLabels[key],
+    }));
 }
 
 function hasApprovedReport(reservation: ReservationWithRelations) {
@@ -379,7 +400,9 @@ export default async function AdminDashboard({
           </div>
         ) : (
           <div className="approval-list">
-            {pendingReports.map(({ reservation, report }) => (
+            {pendingReports.map(({ reservation, report }) => {
+              const changeRows = reservationChangeRows(report);
+              return (
               <article className="approval-item" key={report.id}>
                 <div className="approval-main">
                   <div className="approval-title">
@@ -398,6 +421,18 @@ export default async function AdminDashboard({
                     <p>{report.report_text}</p>
                     {report.issues ? <p className="warning-text"><AlertTriangle size={14} />{report.issues}</p> : null}
                   </div>
+                  {changeRows.length > 0 ? (
+                    <div className="reservation-change-report">
+                      <span><AlertTriangle size={13} />スタッフが案件内容を修正</span>
+                      {changeRows.map((row) => (
+                        <div className="reservation-change-row" key={row.key}>
+                          <small>{row.label}</small>
+                          <p><b>予定</b>{row.before}</p>
+                          <p><b>報告</b>{row.after}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                   <div className="payment-review">
                     <span>支払方法: {paymentLabel(report.payment_method)}</span>
                     {report.payment_method === "card" && report.card_statement_url ? (
@@ -466,7 +501,8 @@ export default async function AdminDashboard({
                   </div>
                 </div>
               </article>
-            ))}
+            );
+            })}
           </div>
         )}
       </section>
@@ -496,7 +532,9 @@ export default async function AdminDashboard({
                 </tr>
               </thead>
               <tbody>
-                {approvedReports.map(({ reservation, report }) => (
+                {approvedReports.map(({ reservation, report }) => {
+                  const changeRows = reservationChangeRows(report);
+                  return (
                   <tr key={report.id}>
                     <td className="nowrap">{formatDateTime(reservation.scheduled_at)}</td>
                     <td>{reservation.service_categories?.name ?? "未設定"}</td>
@@ -504,6 +542,7 @@ export default async function AdminDashboard({
                       <strong>{reservation.customer_name || "お客様名未入力"}</strong>
                       <small>{reservation.service_content}</small>
                       <small>{reservation.address}</small>
+                      {changeRows.length > 0 ? <small className="change-trace">内容修正あり</small> : null}
                     </td>
                     <td>{workerNames(reservation) || "未設定"}</td>
                     <td>{paymentLabel(report.payment_method)}</td>
@@ -517,7 +556,8 @@ export default async function AdminDashboard({
                       </form>
                     </td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>

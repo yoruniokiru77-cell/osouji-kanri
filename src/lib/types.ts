@@ -108,10 +108,19 @@ export type WorkReport = {
   current_cash_balance: number | null;
   change_amount: number | null;
   cash_collected_amount: number | null;
+  reservation_original_snapshot: ReservationReportSnapshot | null;
+  reservation_reported_changes: ReservationReportSnapshot | null;
   approval_status: "pending" | "approved" | "rejected";
   reviewed_at: string | null;
   reviewed_by: string | null;
   created_at: string;
+};
+
+export type ReservationReportSnapshot = {
+  customer_name: string | null;
+  customer_phone: string | null;
+  address: string | null;
+  service_content: string | null;
 };
 
 export type Expense = {
