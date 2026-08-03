@@ -80,6 +80,25 @@ function reservationIsInRange(reservation: ReservationWithRelations, startIso: s
   return scheduledAt >= new Date(startIso).getTime() && scheduledAt < new Date(endIso).getTime();
 }
 
+function expenseIsInRange(expense: Expense, startIso: string, endIso: string) {
+  const start = new Date(startIso).getTime();
+  const end = new Date(endIso).getTime();
+  const linkedReservationDates =
+    expense.expense_reservations
+      ?.map((link) => link.reservations?.scheduled_at)
+      .filter((value): value is string => Boolean(value)) ?? [];
+
+  if (linkedReservationDates.length > 0) {
+    return linkedReservationDates.some((value) => {
+      const scheduledAt = new Date(value).getTime();
+      return scheduledAt >= start && scheduledAt < end;
+    });
+  }
+
+  const createdAt = new Date(expense.created_at).getTime();
+  return createdAt >= start && createdAt < end;
+}
+
 async function apiGetCached<T>(key: string, tags: string[], loader: () => Promise<T>) {
   const now = Date.now();
   const cached = apiCache.get(key) as CacheEntry<T> | undefined;
@@ -298,10 +317,8 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
       supabase
         .from("expenses")
         .select(
-          "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, profiles(id, display_name, role, commission_rate), expense_categories(id, name), expense_reservations(reservation_id, reservations(id, customer_name, service_content))",
+          "id, staff_id, category_id, reservation_id, amount, note, status, receipt_url, created_at, profiles(id, display_name, role, commission_rate), expense_categories(id, name), expense_reservations(reservation_id, reservations(id, scheduled_at, customer_name, service_content))",
         )
-        .gte("created_at", startIso)
-        .lt("created_at", endIso)
         .order("created_at", { ascending: false }),
     ]);
 
@@ -316,11 +333,14 @@ export async function getCachedAdminDashboardData(startIso: string, endIso: stri
       baseReservations,
       approvedReservations,
     );
+    const monthlyExpenses = ((expensesResult.data ?? []) as unknown as Expense[]).filter((expense) =>
+      expenseIsInRange(expense, startIso, endIso),
+    );
 
     return {
       categories: (categoriesResult.data ?? []) as ServiceCategory[],
       expenseCategories: (expenseCategoriesResult.data ?? []) as ExpenseCategory[],
-      expenses: (expensesResult.data ?? []) as unknown as Expense[],
+      expenses: monthlyExpenses,
       pendingReservations: pendingReportReservations,
       reservations: monthlyReservations,
       workers: (workersResult.data ?? []) as Worker[],
