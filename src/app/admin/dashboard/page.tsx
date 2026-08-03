@@ -73,8 +73,18 @@ function supporterAssignments(reservation: ReservationWithRelations) {
 }
 
 function supporterAmountLabel(assignment: ReservationWithRelations["reservation_workers"][number]) {
+  return formatCurrency(supporterAmount(assignment));
+}
+
+function supporterAmount(assignment: ReservationWithRelations["reservation_workers"][number]) {
   const amount = assignment.compensation_value ?? assignment.workers?.default_compensation_value ?? 0;
-  return formatCurrency(Number(amount));
+  return Number(amount);
+}
+
+function supporterTotalAmount(assignments: ReservationWithRelations["reservation_workers"]) {
+  return assignments
+    .filter((assignment) => assignment.is_supporter && assignment.workers)
+    .reduce((sum, assignment) => sum + supporterAmount(assignment), 0);
 }
 
 function paymentLabel(method: string) {
@@ -422,6 +432,8 @@ export default async function AdminDashboard({
               const brandPhotoUrls = parseReceiptUrls(report.brand_photo_urls);
               const normalNames = normalWorkerNames(reservation);
               const supporters = supporterAssignments(reservation);
+              const supporterTotal = supporterTotalAmount(reservation.reservation_workers);
+              const suggestedApprovedAmount = Math.max(0, Number(report.reported_amount) - supporterTotal);
               return (
               <article className="approval-item" key={report.id}>
                 <div className="approval-main">
@@ -473,6 +485,12 @@ export default async function AdminDashboard({
                   ) : null}
                   <div className="payment-review">
                     <span>支払方法: {paymentLabel(report.payment_method)}</span>
+                    <span>
+                      承認売上計算:
+                      報告 {formatCurrency(Number(report.reported_amount))} -
+                      応援費 {formatCurrency(supporterTotal)} =
+                      {formatCurrency(suggestedApprovedAmount)}
+                    </span>
                     {report.payment_method === "card" && report.card_statement_url ? (
                       <a href={report.card_statement_url} rel="noreferrer" target="_blank">カード明細を確認</a>
                     ) : null}
@@ -508,7 +526,7 @@ export default async function AdminDashboard({
                         <span className="currency-input">
                           <b>¥</b>
                           <input
-                            defaultValue={Number(report.reported_amount)}
+                            defaultValue={suggestedApprovedAmount}
                             min="0"
                             name="approved_amount"
                             required
