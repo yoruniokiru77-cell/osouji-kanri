@@ -38,9 +38,11 @@ import { expenseLabels, reservationLabels, statusClass } from "@/lib/labels";
 import type { ReservationReportSnapshot, ReservationWithRelations, WorkReport } from "@/lib/types";
 
 function monthRange(month: string) {
-  const start = new Date(`${month}-01T00:00:00+09:00`);
-  const end = new Date(start);
-  end.setMonth(end.getMonth() + 1);
+  const [year, value] = month.split("-").map(Number);
+  const nextMonth = value === 12 ? 1 : value + 1;
+  const nextYear = value === 12 ? year + 1 : year;
+  const start = new Date(`${year}-${String(value).padStart(2, "0")}-01T00:00:00+09:00`);
+  const end = new Date(`${nextYear}-${String(nextMonth).padStart(2, "0")}-01T00:00:00+09:00`);
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
