@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3, CreditCard, MapPin, Upload, Users } from "lucide-react";
+import { CheckCircle2, Clock3, CreditCard, MapPin, Upload, Users, Video } from "lucide-react";
 import { upsertWorkReport } from "@/app/actions";
 import { BrandPhotoUpload } from "@/components/BrandPhotoUpload";
 import { parseReservationDate } from "@/lib/datetime";
@@ -79,6 +79,7 @@ export function StaffReportForm({
   const [currentCashBalanceInput, setCurrentCashBalanceInput] = useState("");
   const [cashCollectedAmountInput, setCashCollectedAmountInput] = useState("");
   const [statementUrl, setStatementUrl] = useState("");
+  const [cashVideoPath, setCashVideoPath] = useState("");
   const [brandPhotoValue, setBrandPhotoValue] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -131,6 +132,7 @@ export function StaffReportForm({
     setReportedAddress(nextBooking?.address ?? "");
     setReportedServiceContent(nextBooking?.content ?? "");
     setBrandPhotoValue("");
+    setCashVideoPath("");
   }, [bookings, selectedId]);
 
   const reconciliationLabel = useMemo(() => {
@@ -223,6 +225,48 @@ export function StaffReportForm({
     const { data } = supabase.storage.from("payment-statements").getPublicUrl(path);
     setStatementUrl(data.publicUrl);
     setUploading(false);
+  }
+
+  async function uploadCashVideo(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("video/")) {
+      setUploadError("動画ファイルを選択してください");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      setUploadError("動画は100MB以下にしてください");
+      event.target.value = "";
+      return;
+    }
+
+    setUploading(true);
+    setUploadError("");
+    const supabase = createClient();
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) {
+      setUploadError("ログイン情報を確認できません");
+      setUploading(false);
+      return;
+    }
+
+    const extension = file.name.split(".").pop() ?? "mp4";
+    const path = `${auth.user.id}/${selectedId || "unselected"}/${Date.now()}.${extension}`;
+    const { error } = await supabase.storage
+      .from("cash-videos")
+      .upload(path, file, { contentType: file.type, upsert: true });
+
+    if (error) {
+      setUploadError(error.message);
+      setUploading(false);
+      return;
+    }
+
+    setCashVideoPath(path);
+    setUploading(false);
+    event.target.value = "";
   }
 
   return (
@@ -492,6 +536,19 @@ export function StaffReportForm({
 
       <div className="payment-panel cash-reconciliation cash-payment-panel">
           <h3>現金残高チェック</h3>
+          <input name="cash_video_url" type="hidden" value={cashVideoPath} />
+          <label className="statement-upload cash-video-upload">
+            <Video size={17} />
+            <span>{cashVideoPath ? "現金確認動画を添付済み" : "現金確認動画を添付（任意）"}</span>
+            <Upload size={16} />
+            <input accept="video/*" capture="environment" onChange={uploadCashVideo} type="file" />
+          </label>
+          {cashVideoPath ? (
+            <button className="button" onClick={() => setCashVideoPath("")} type="button">動画を削除</button>
+          ) : null}
+          {uploading ? <small>アップロード中...</small> : null}
+          {uploadError ? <small className="form-error">{uploadError}</small> : null}
+          <small className="field-help">1本・100MBまで。動画はスタッフ本人と管理者だけ確認できます。</small>
           <label>
             <span>前回の残高（自動表示）</span>
             <div className="currency-input">

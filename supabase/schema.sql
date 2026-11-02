@@ -117,6 +117,7 @@ create table if not exists public.work_reports (
   previous_change_amount numeric(12, 0),
   change_amount numeric(12, 0),
   cash_collected_amount numeric(12, 0),
+  cash_video_url text,
   brand_photo_urls text,
   reservation_original_snapshot jsonb,
   reservation_reported_changes jsonb,

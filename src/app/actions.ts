@@ -971,6 +971,7 @@ export async function upsertWorkReport(formData: FormData) {
   const previousChangeAmount = readNumber(formData, "previous_change_amount");
   const currentCashBalance = readNumber(formData, "current_cash_balance");
   const cashCollectedAmount = readNumber(formData, "cash_collected_amount");
+  const cashVideoUrl = readString(formData, "cash_video_url") || null;
   let changeAmount = readNumber(formData, "change_amount");
 
   if (paymentMethod === "card" && !cardStatementUrl) {
@@ -1042,6 +1043,7 @@ export async function upsertWorkReport(formData: FormData) {
       current_cash_balance: paymentMethod === "cash" ? currentCashBalance : null,
       change_amount: paymentMethod === "cash" ? changeAmount : null,
       cash_collected_amount: paymentMethod === "cash" ? cashCollectedAmount : null,
+      cash_video_url: paymentMethod === "cash" ? cashVideoUrl : null,
       brand_photo_urls: brandPhotoUrls,
       reservation_original_snapshot: hasReservationChanges ? reservationOriginalSnapshot : null,
       reservation_reported_changes: hasReservationChanges ? reservationReportedSnapshot : null,

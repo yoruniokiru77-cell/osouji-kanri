@@ -35,6 +35,7 @@ import { getCachedAdminDashboardData } from "@/lib/cached-data";
 import { formatReservationDateKey, formatReservationDateTime, parseReservationDate } from "@/lib/datetime";
 import { calculateSummary, formatCurrency, isOwnerStaffName } from "@/lib/finance";
 import { expenseLabels, reservationLabels, statusClass } from "@/lib/labels";
+import { createClient } from "@/lib/supabase/server";
 import type { ReservationReportSnapshot, ReservationWithRelations, WorkReport } from "@/lib/types";
 
 function monthRange(month: string) {
@@ -181,6 +182,19 @@ export default async function AdminDashboard({
       .filter((report) => report.approval_status === "approved" && reservation.status === "completed")
       .map((report) => ({ reservation, report })),
   );
+  const cashVideoPaths = [...pendingReports, ...approvedReports]
+    .map(({ report }) => report.cash_video_url)
+    .filter((path): path is string => Boolean(path));
+  const cashVideoUrls = new Map<string, string>();
+  if (cashVideoPaths.length > 0) {
+    const supabase = await createClient();
+    await Promise.all(
+      cashVideoPaths.map(async (path) => {
+        const { data } = await supabase.storage.from("cash-videos").createSignedUrl(path, 60 * 60);
+        if (data?.signedUrl) cashVideoUrls.set(path, data.signedUrl);
+      }),
+    );
+  }
   const unreportedReservations = reservations.filter(
     (reservation) =>
       reservation.status === "scheduled" &&
@@ -497,12 +511,19 @@ export default async function AdminDashboard({
                       <a href={report.card_statement_url} rel="noreferrer" target="_blank">カード明細を確認</a>
                     ) : null}
                     {report.payment_method === "cash" ? (
-                      <span>
-                        前回釣銭 {formatCurrency(Number(report.previous_change_amount))} /
-                        現在残高 {formatCurrency(Number(report.current_cash_balance))} /
-                        次回繰越 {formatCurrency(Number(report.change_amount))} /
-                        管理者へ渡す {formatCurrency(Number(report.cash_collected_amount))}
-                      </span>
+                      <>
+                        <span>
+                          前回釣銭 {formatCurrency(Number(report.previous_change_amount))} /
+                          現在残高 {formatCurrency(Number(report.current_cash_balance))} /
+                          次回繰越 {formatCurrency(Number(report.change_amount))} /
+                          管理者へ渡す {formatCurrency(Number(report.cash_collected_amount))}
+                        </span>
+                        {report.cash_video_url && cashVideoUrls.get(report.cash_video_url) ? (
+                          <a href={cashVideoUrls.get(report.cash_video_url)} rel="noreferrer" target="_blank">
+                            現金確認動画を再生
+                          </a>
+                        ) : null}
+                      </>
                     ) : null}
                   </div>
                   {brandPhotoUrls.length > 0 ? (
@@ -627,7 +648,16 @@ export default async function AdminDashboard({
                       ) : null}
                     </td>
                     <td>{workerNames(reservation) || "未設定"}</td>
-                    <td>{paymentLabel(report.payment_method)}</td>
+                    <td>
+                      {paymentLabel(report.payment_method)}
+                      {report.cash_video_url && cashVideoUrls.get(report.cash_video_url) ? (
+                        <small>
+                          <a className="text-link" href={cashVideoUrls.get(report.cash_video_url)} rel="noreferrer" target="_blank">
+                            現金動画
+                          </a>
+                        </small>
+                      ) : null}
+                    </td>
                     <td className="numeric">{formatCurrency(Number(report.reported_amount))}</td>
                     <td>
                       <form action={reopenWorkReport}>
